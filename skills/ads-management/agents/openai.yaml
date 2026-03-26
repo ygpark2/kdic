@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ads Management"
+  short_description: "Ad models and admin UI"
+  default_prompt: "Use $ads-management to update ads features or admin controls."
+policy:
+  allow_implicit_invocation: true

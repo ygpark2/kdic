@@ -1,0 +1,64 @@
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- 상단 검색바 구역 (1/3 폭 유지) -->
+    <div class="mb-12">
+        <form action=@{SearchR} method=get class="relative max-w-md mx-auto shadow-lg rounded-2xl overflow-hidden border border-slate-100">
+            <input type="text" name="q" value="#{fromMaybe "" mQuery}" placeholder="단어를 다시 검색해보세요..." class="w-full pl-12 pr-6 py-4 text-lg bg-white outline-none">
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></svg>
+
+    <!-- 3컬럼 레이아웃 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- 좌측 컬럼: 탐색 메뉴 (3/12) -->
+        <aside class="hidden lg:block lg:col-span-3">
+            <div class="sticky top-24 space-y-2">
+                <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Explore
+                <a href=@{HomeR} class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-100 text-slate-900 font-bold">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></svg>
+                    Home
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></svg>
+                    Trending
+                <a href=@{NotificationsR} class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></svg>
+                    Notifications
+
+        <!-- 중앙 컬럼: 검색 결과 (6/12) -->
+        <main class="lg:col-span-6">
+            <div class="mb-6 px-4">
+                <h1 class="text-xl font-bold text-slate-900">
+                    $maybe q <- mQuery
+                        Search results for "#{q}"
+                    $nothing
+                        Search results
+            
+            <div class="space-y-4">
+                $if null words
+                    <div class="p-12 text-center bg-white rounded-3xl border border-slate-100">
+                        <p class="text-slate-400 font-medium">찾으시는 결과가 없습니다.</p>
+                $else
+                    $forall Entity wordId word <- words
+                        <a href=@{WordR wordId} class="block p-6 bg-white rounded-2xl border border-slate-100 hover:shadow-md transition-all group">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                        #{wordText word}
+                                    $maybe trans <- wordTranscription word
+                                        <span class="text-slate-400 font-medium ml-2">[#{trans}]
+                                <div class="text-slate-300 group-hover:text-blue-500 transition-colors">
+                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></svg>
+
+        <!-- 우측 컬럼: 추천/트렌딩 (3/12) -->
+        <aside class="hidden lg:block lg:col-span-3">
+            <div class="sticky top-24 space-y-6">
+                <div class="p-6 bg-white rounded-2xl border border-slate-100">
+                    <h3 class="font-bold text-slate-900 mb-4">Trending Words</h3>
+                    <div class="space-y-3">
+                        <a href="#" class="block text-sm text-blue-600 font-medium hover:underline">#Haskell</a>
+                        <a href="#" class="block text-sm text-blue-600 font-medium hover:underline">#Functional_Programming</a>
+                        <a href="#" class="block text-sm text-blue-600 font-medium hover:underline">#Yesod_Web</a>
+                
+                <div class="p-6 bg-slate-900 rounded-2xl text-white">
+                    <h3 class="font-bold mb-2">Connect</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">단어에 얽힌 더 많은 이야기를 나누고 싶다면 지금 참여하세요.</p>
+                    <button class="w-full py-2 bg-white text-slate-900 rounded-xl text-sm font-bold">Join Community</button>

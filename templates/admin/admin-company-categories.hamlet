@@ -1,0 +1,28 @@
+<div class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Company Categories</h1>
+      <p class="mt-2 text-sm text-slate-600">Create, rename, and delete company categories used by the company directory.</p>
+    <a href=@{AdminCompanyCategoryNewR} class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Create category</a>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+    <h2 class="text-lg font-medium text-slate-900">Existing categories</h2>
+    $if null categoryRows
+      <p class="mt-3 text-sm text-slate-500">No company categories yet.
+    $else
+      <ul class="mt-4 space-y-4">
+        $forall (Entity categoryId category, companyCount) <- categoryRows
+          <li class="rounded-xl border border-slate-200 bg-white p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-900">#{companyGroupName category}
+                <div class="mt-1 text-xs text-slate-500">#{companyCount} companies
+                $maybe description <- companyGroupDescription category
+                  <div class="mt-2 text-sm text-slate-600">#{description}
+              <div class="flex items-center gap-3">
+                <a href=@{AdminCompanyCategoryR categoryId} class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">View
+                <form method=post action=@{AdminCompanyCategoryR categoryId} class="m-0">
+                  $maybe tok <- mCsrfToken
+                    <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+                  <input type=hidden name=action value="delete">
+                  <button class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Delete</button>

@@ -1,0 +1,163 @@
+.feed-shell .grid {
+  display: block;
+}
+
+@media (min-width: 1000px) {
+  .forum-layout-grid {
+    width: calc(100% - 56px);
+    margin-left: auto;
+    margin-right: auto;
+    grid-template-columns: 224px minmax(0, 1fr) 280px;
+  }
+}
+
+.feed-shell .grid > aside {
+  display: none;
+}
+
+.feed-shell .grid > section {
+  width: 100%;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.forum-content-wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.forum-content-wrap pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.forum-content-wrap img,
+.forum-content-wrap video,
+.forum-content-wrap iframe,
+.forum-content-wrap table {
+  max-width: 100%;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-menu__summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.profile-menu__summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-menu[open] .profile-menu__summary {
+  border-color: #cbd5e1;
+}
+
+.feed-menu {
+  position: relative;
+  z-index: 4;
+}
+
+.feed-menu__toggle {
+  list-style: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: #94a3b8;
+}
+
+.feed-menu__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.feed-menu[open] .feed-menu__toggle {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.feed-menu__panel {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.feed-menu__item {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.feed-menu__item:hover {
+  background: #f8fafc;
+}
+
+.toast-container {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+}
+
+.toast {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(-6px);
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toast--hide {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.toast--show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast__icon {
+  font-weight: 700;
+}
+
+.toast--success {
+  background: #16a34a;
+}
+
+.toast--error {
+  background: #dc2626;
+}

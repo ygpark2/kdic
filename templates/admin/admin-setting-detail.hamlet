@@ -1,0 +1,44 @@
+<div class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Settings</h1>
+      <p class="mt-2 text-sm text-slate-600">Manage site-wide configuration values.</p>
+    <a href=@{AdminSettingsR} class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Back to list</a>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+    $if isNew
+      <h2 class="text-lg font-medium text-slate-900">Create setting</h2>
+      <form method=post action=@{AdminSettingsR} class="admin-form mt-4">
+        $maybe tok <- mCsrfToken
+          <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+        <input type=hidden name=action value="upsert">
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="setting-key">Key</label>
+            <input id="setting-key" type=text name=key placeholder="key" required class="admin-form-input">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="setting-value">Value</label>
+            <input id="setting-value" type=text name=value placeholder="value" required class="admin-form-input">
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label">&nbsp;</label>
+            <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save</button>
+        <p class="text-xs text-slate-500">Example: key = site_title, value = HKForum</p>
+    $else
+      $maybe Entity _ setting <- mSetting
+        <h2 class="text-lg font-medium text-slate-900">Edit setting</h2>
+        <form method=post action=@{AdminSettingsR} class="admin-form mt-4">
+          $maybe tok <- mCsrfToken
+            <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+          <input type=hidden name=action value="upsert">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="setting-key">Key</label>
+              <input id="setting-key" type=text name=key value=#{siteSettingKey setting} readonly class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="setting-value">Value</label>
+              <input id="setting-value" type=text name=value value=#{siteSettingValue setting} required class="admin-form-input">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label">&nbsp;</label>
+              <button class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Save</button>

@@ -1,0 +1,858 @@
+const THEME_STORAGE_KEY = 'hkforum-theme';
+const HOME_CUSTOM_TABS_KEY = 'hkforum-home-custom-tabs';
+
+const syncThemeSwitches = () => {
+  const isDark = document.documentElement.dataset.theme === 'dark';
+  document.querySelectorAll('[data-theme-switch]').forEach((switchEl) => {
+    const thumb = switchEl.querySelector('[data-theme-switch-thumb]');
+    if (!thumb) return;
+    switchEl.style.backgroundColor = isDark ? '#0f172a' : '#ffffff';
+    switchEl.style.borderColor = isDark ? '#0f172a' : '#cbd5e1';
+    thumb.style.backgroundColor = isDark ? '#ffffff' : '#0f172a';
+    thumb.style.transform = isDark ? 'translateX(24px)' : 'translateX(0)';
+  });
+};
+
+const applyTheme = (theme) => {
+  document.documentElement.dataset.theme = theme;
+  syncThemeSwitches();
+};
+
+const openDialogByKey = (key) => {
+  if (!key) return;
+  const modal = document.querySelector(`[data-modal="${key}"]`);
+  if (!modal || typeof modal.showModal !== 'function') return;
+  if (!modal.open) modal.showModal();
+};
+
+const closeDialogByKey = (key) => {
+  if (!key) return;
+  const modal = document.querySelector(`[data-modal="${key}"]`);
+  if (!modal || typeof modal.close !== 'function') return;
+  if (modal.open) modal.close();
+};
+
+const prepareGlobalPostModal = () => {
+  const form = document.querySelector('[data-global-post-form]');
+  if (!form) return;
+  form.reset();
+  const boardSelect = form.querySelector('select[name="boardId"]');
+  if (boardSelect && boardSelect.options.length > 0) {
+    boardSelect.selectedIndex = 0;
+  }
+};
+
+const HOME_FEED_LABELS = {
+  unread: 'Unread',
+  everything: 'Everything',
+  trends: 'Trends',
+  following: 'Following',
+  interests: 'Interests',
+};
+
+const DEFAULT_TAB_OPTIONS = {
+  trending: false,
+  unreads: false,
+  people: '',
+  programLanguages: '',
+  replies: false,
+  reactions: false,
+  postType: 'any',
+  sites: false,
+  contents: '',
+  media: false,
+};
+
+let refreshHomeTabSettings = null;
+
+const loadHomeCustomTabs = () => {
+  try {
+    if (!window.localStorage) return [];
+    const raw = localStorage.getItem(HOME_CUSTOM_TABS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        const name = normalizeTabName(item?.name);
+        const tag = normalizeTabTag(item?.tag);
+        const options = normalizeTabOptions(item?.options);
+        return name && tag ? { name, tag, options } : null;
+      })
+      .filter((item) => !!item);
+  } catch (_err) {
+    return [];
+  }
+};
+
+const saveHomeCustomTabs = (tabs) => {
+  try {
+    if (!window.localStorage) return;
+    localStorage.setItem(HOME_CUSTOM_TABS_KEY, JSON.stringify(tabs));
+  } catch (_err) {
+    // ignore localStorage errors
+  }
+};
+
+const normalizeTabTag = (raw) => {
+  if (!raw) return '';
+  return raw.toString().trim().replace(/^#+/, '').toLowerCase().replace(/\s+/g, '-').slice(0, 32);
+};
+
+const normalizeTabName = (raw) => {
+  if (!raw) return '';
+  return raw.toString().trim().replace(/\s+/g, ' ').slice(0, 24);
+};
+
+const normalizeTabOptions = (raw) => {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const postTypeRaw = (source.postType || '').toString().toLowerCase();
+  const postType =
+    postTypeRaw === 'text' || postTypeRaw === 'link' || postTypeRaw === 'media'
+      ? postTypeRaw
+      : 'any';
+  return {
+    trending: !!source.trending,
+    unreads: !!source.unreads,
+    people: normalizeTabTag(source.people || ''),
+    programLanguages: (source.programLanguages || '')
+      .toString()
+      .split(',')
+      .map((v) => normalizeTabTag(v))
+      .filter((v) => v)
+      .slice(0, 8)
+      .join(','),
+    replies: !!source.replies,
+    reactions: !!source.reactions,
+    postType,
+    sites: !!source.sites,
+    contents: normalizeTabName(source.contents || '').toLowerCase(),
+    media: !!source.media,
+  };
+};
+
+const homeCustomTabHref = (tab) => {
+  const options = normalizeTabOptions(tab?.options);
+  const params = new URLSearchParams();
+  params.set('tab', options.trending ? 'trends' : 'everything');
+  if (tab?.tag) params.set('tag', tab.tag);
+  if (options.trending) params.set('sort', 'trending');
+  if (options.unreads) params.set('unread', '1');
+  if (options.people) params.set('author', options.people);
+  if (options.programLanguages) params.set('lang', options.programLanguages);
+  if (options.replies) params.set('replies', '1');
+  if (options.reactions) params.set('reactions', '1');
+  if (options.postType !== 'any') params.set('postType', options.postType);
+  if (options.sites) params.set('sites', '1');
+  if (options.contents) params.set('q', options.contents);
+  if (options.media) params.set('media', '1');
+  return `/home?${params.toString()}`;
+};
+
+const closeAllReactionPickers = () => {
+  document.querySelectorAll('[data-reaction-picker]').forEach((picker) => {
+    picker.classList.add('hidden');
+  });
+};
+
+const initHomeCustomTabs = () => {
+  const nav = document.querySelector('[data-home-tab-nav]');
+  const navHost = document.querySelector('[data-home-custom-tabs]');
+  if (!nav || !navHost) return;
+
+  const nextUniqueTag = (baseRaw, usedTags) => {
+    const base = normalizeTabTag(baseRaw) || 'tab';
+    let candidate = base;
+    let suffix = 2;
+    while (!candidate || usedTags.has(candidate)) {
+      const suffixText = `-${suffix}`;
+      const maxBaseLength = Math.max(1, 32 - suffixText.length);
+      candidate = `${base.slice(0, maxBaseLength)}${suffixText}`;
+      suffix += 1;
+    }
+    usedTags.add(candidate);
+    return candidate;
+  };
+
+  const modalList = document.querySelector('[data-home-custom-tab-list]');
+  const form = document.querySelector('[data-home-tab-form]');
+  const nameInput = document.getElementById('home-tab-name');
+  const tagInput = document.getElementById('home-tab-tag');
+  const settingsNameInput = document.querySelector('[data-home-tab-settings-name]');
+  const copyButton = document.querySelector('[data-home-tab-copy]');
+  const deleteButton = document.querySelector('[data-home-tab-delete]');
+  const settingsDrawer = document.querySelector('[data-home-tab-settings-drawer]');
+  const optionRoot = document.querySelector('[data-home-tab-options]');
+  const activeTab = (nav.getAttribute('data-active-tab') || 'everything').toLowerCase();
+  const activeTag = normalizeTabTag(nav.getAttribute('data-active-tag') || '');
+  const rawTabs = loadHomeCustomTabs();
+  const usedInitialTags = new Set();
+  let normalizedTabsChanged = false;
+  let tabs = rawTabs.map((tab) => {
+    const normalizedName = normalizeTabName(tab.name);
+    const uniqueTag = nextUniqueTag(tab.tag || normalizedName, usedInitialTags);
+    if (uniqueTag !== normalizeTabTag(tab.tag)) {
+      normalizedTabsChanged = true;
+    }
+    return {
+      ...tab,
+      name: normalizedName,
+      tag: uniqueTag,
+      options: normalizeTabOptions(tab.options),
+    };
+  });
+  if (normalizedTabsChanged) {
+    saveHomeCustomTabs(tabs);
+  }
+
+  const currentCustomIndex = () => {
+    if (!activeTag) return -1;
+    return tabs.findIndex((tab) => tab.tag === activeTag);
+  };
+
+  const currentCustomTab = () => {
+    const idx = currentCustomIndex();
+    if (idx < 0) return null;
+    return tabs[idx];
+  };
+
+  const isCustomActive = () => currentCustomIndex() >= 0;
+
+  const currentTabName = () => {
+    const tab = currentCustomTab();
+    if (tab) return tab.name;
+    return HOME_FEED_LABELS[activeTab] || 'Everything';
+  };
+
+  const renderNav = () => {
+    navHost.innerHTML = '';
+    tabs.forEach((tab) => {
+      const a = document.createElement('a');
+      a.href = homeCustomTabHref(tab);
+      a.textContent = tab.name;
+      a.className =
+        activeTag === tab.tag
+          ? 'border-b-2 border-slate-900 pb-1 text-slate-900'
+          : 'transition hover:text-slate-800';
+      navHost.appendChild(a);
+    });
+  };
+
+  const renderModalList = () => {
+    if (!modalList) return;
+    modalList.innerHTML = '';
+    if (tabs.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'text-sm text-slate-500';
+      empty.textContent = 'No custom tabs yet.';
+      modalList.appendChild(empty);
+      return;
+    }
+    tabs.forEach((tab, index) => {
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2';
+      row.innerHTML = `<div class="min-w-0"><div class="truncate text-sm font-semibold text-slate-900">${tab.name}</div><div class="truncate text-xs text-slate-500">#${tab.tag}</div></div>`;
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className =
+        'rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 hover:border-slate-900 hover:text-slate-900';
+      removeButton.textContent = 'Remove';
+      removeButton.setAttribute('data-remove-home-tab-index', String(index));
+      row.appendChild(removeButton);
+      modalList.appendChild(row);
+    });
+  };
+
+  const renderOptionValues = () => {
+    if (!optionRoot) return;
+    const tab = currentCustomTab();
+    const options = normalizeTabOptions(tab ? tab.options : DEFAULT_TAB_OPTIONS);
+    const values = {
+      trending: options.trending ? 'On' : 'Off',
+      unreads: options.unreads ? 'On' : 'Off',
+      people: options.people ? `@${options.people}` : 'Any',
+      programLanguages: options.programLanguages || 'Any',
+      replies: options.replies ? '1' : '0',
+      reactions: options.reactions ? 'On' : 'Off',
+      postType:
+        options.postType === 'text'
+          ? 'Text'
+          : options.postType === 'link'
+            ? 'Link'
+            : options.postType === 'media'
+              ? 'Media'
+              : 'Any',
+      sites: options.sites ? 'On' : 'Off',
+      contents: options.contents || 'Any',
+      media: options.media ? 'On' : 'Off',
+    };
+    optionRoot.querySelectorAll('[data-home-option-value]').forEach((el) => {
+      const key = el.getAttribute('data-home-option-value');
+      if (!key) return;
+      el.textContent = values[key] || '';
+    });
+  };
+
+  const setSettingsButtonState = () => {
+    const enabled = isCustomActive();
+    if (copyButton) {
+      copyButton.disabled = !enabled;
+      copyButton.classList.toggle('opacity-40', !enabled);
+    }
+    if (deleteButton) {
+      deleteButton.disabled = !enabled;
+      deleteButton.classList.toggle('opacity-40', !enabled);
+    }
+    if (optionRoot) {
+      optionRoot.querySelectorAll('[data-home-tab-option]').forEach((button) => {
+        button.disabled = !enabled;
+        button.classList.toggle('opacity-40', !enabled);
+      });
+    }
+  };
+
+  const refreshSettings = () => {
+    if (settingsNameInput) {
+      settingsNameInput.value = currentTabName();
+      settingsNameInput.disabled = !isCustomActive();
+    }
+    setSettingsButtonState();
+    renderOptionValues();
+  };
+
+  renderNav();
+  renderModalList();
+  refreshSettings();
+  refreshHomeTabSettings = refreshSettings;
+
+  if (modalList) {
+    modalList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-home-tab-index]');
+      if (!button) return;
+      const index = Number.parseInt(button.getAttribute('data-remove-home-tab-index') || '', 10);
+      if (!Number.isInteger(index) || index < 0 || index >= tabs.length) return;
+      tabs = tabs.filter((_, idx) => idx !== index);
+      saveHomeCustomTabs(tabs);
+      renderNav();
+      renderModalList();
+      refreshSettings();
+      showToast('Tab removed', 'success');
+    });
+  }
+
+  if (form && nameInput && tagInput) {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = normalizeTabName(nameInput.value);
+      const tag = normalizeTabTag(tagInput.value);
+      if (!name || !tag) {
+        showToast('Tab name and tag are required', 'error');
+        return;
+      }
+      if (tabs.some((tab) => tab.tag === tag)) {
+        showToast('Tab already exists', 'error');
+        return;
+      }
+      tabs = [...tabs, { name, tag, options: { ...DEFAULT_TAB_OPTIONS } }];
+      saveHomeCustomTabs(tabs);
+      renderNav();
+      renderModalList();
+      refreshSettings();
+      form.reset();
+      closeDialogByKey('home-tab-modal');
+      const created = tabs[tabs.length - 1];
+      window.location.href = homeCustomTabHref(created);
+    });
+  }
+
+  if (settingsNameInput) {
+    const commitRename = () => {
+      const idx = currentCustomIndex();
+      const nextName = normalizeTabName(settingsNameInput.value);
+      if (idx < 0) {
+        showToast('Default tab cannot be renamed', 'error');
+        refreshSettings();
+        return;
+      }
+      if (!nextName) {
+        showToast('Tab name is required', 'error');
+        refreshSettings();
+        return;
+      }
+      tabs[idx] = { ...tabs[idx], name: nextName };
+      saveHomeCustomTabs(tabs);
+      renderNav();
+      renderModalList();
+      refreshSettings();
+      showToast('Tab renamed', 'success');
+    };
+    settingsNameInput.addEventListener('change', commitRename);
+    settingsNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitRename();
+      }
+    });
+  }
+
+  if (copyButton) {
+    copyButton.addEventListener('click', () => {
+      const idx = currentCustomIndex();
+      if (idx < 0) {
+        showToast('Default tab cannot be copied here', 'error');
+        return;
+      }
+      const source = tabs[idx];
+      let nextName = `${source.name} Copy`;
+      let suffix = 2;
+      while (tabs.some((tab) => tab.name.toLowerCase() === nextName.toLowerCase())) {
+        nextName = `${source.name} Copy ${suffix}`;
+        suffix += 1;
+      }
+      const usedTags = new Set(tabs.map((tab) => tab.tag));
+      const nextTag = nextUniqueTag(`${source.tag}-copy`, usedTags);
+      tabs = [...tabs, { name: nextName, tag: nextTag, options: { ...source.options } }];
+      saveHomeCustomTabs(tabs);
+      renderNav();
+      renderModalList();
+      refreshSettings();
+      showToast('Tab copied', 'success');
+    });
+  }
+
+  if (deleteButton) {
+    deleteButton.addEventListener('click', () => {
+      const idx = currentCustomIndex();
+      if (idx < 0) {
+        showToast('Default tab cannot be deleted', 'error');
+        return;
+      }
+      tabs = tabs.filter((_, tabIndex) => tabIndex !== idx);
+      saveHomeCustomTabs(tabs);
+      renderNav();
+      renderModalList();
+      refreshSettings();
+      closeDialogByKey('home-tab-settings-drawer');
+      window.location.href = '/home?tab=everything';
+    });
+  }
+
+  if (optionRoot) {
+    optionRoot.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-home-tab-option]');
+      if (!button) return;
+      const idx = currentCustomIndex();
+      if (idx < 0) {
+        showToast('Open a custom tab to edit these options', 'error');
+        return;
+      }
+      const key = button.getAttribute('data-home-tab-option');
+      if (!key) return;
+      const tab = tabs[idx];
+      const options = normalizeTabOptions(tab.options);
+      const normalizeKeyword = (raw) =>
+        (raw || '')
+          .toString()
+          .trim()
+          .replace(/\s+/g, ' ')
+          .slice(0, 40)
+          .toLowerCase();
+
+      if (key === 'trending' || key === 'unreads' || key === 'replies' || key === 'reactions' || key === 'sites' || key === 'media') {
+        options[key] = !options[key];
+      } else if (key === 'people') {
+        const value = window.prompt('Author handle filter (empty clears)', options.people);
+        if (value === null) return;
+        options.people = normalizeTabTag(value);
+      } else if (key === 'programLanguages') {
+        const value = window.prompt('Language tags (comma separated)', options.programLanguages);
+        if (value === null) return;
+        options.programLanguages = value
+          .split(',')
+          .map((v) => normalizeTabTag(v))
+          .filter((v) => v)
+          .slice(0, 8)
+          .join(',');
+      } else if (key === 'contents') {
+        const value = window.prompt('Content keyword filter (empty clears)', options.contents);
+        if (value === null) return;
+        options.contents = normalizeKeyword(value);
+      } else if (key === 'postType') {
+        const value = window.prompt('Post type: any, text, link, media', options.postType);
+        if (value === null) return;
+        const nextType = value.trim().toLowerCase();
+        if (!['any', 'text', 'link', 'media'].includes(nextType)) {
+          showToast('Use one of: any, text, link, media', 'error');
+          return;
+        }
+        options.postType = nextType;
+      } else {
+        return;
+      }
+
+      tabs[idx] = { ...tab, options };
+      saveHomeCustomTabs(tabs);
+      renderNav();
+      renderModalList();
+      refreshSettings();
+      window.location.href = homeCustomTabHref(tabs[idx]);
+    });
+  }
+
+  if (settingsDrawer) {
+    settingsDrawer.addEventListener('click', (event) => {
+      if (event.target === settingsDrawer) {
+        closeDialogByKey('home-tab-settings-drawer');
+      }
+    });
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const savedTheme = window.localStorage ? localStorage.getItem(THEME_STORAGE_KEY) : null;
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      applyTheme(savedTheme);
+    }
+  } catch (_err) {
+    // ignore localStorage errors
+  }
+  syncThemeSwitches();
+  initHomeCustomTabs();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const alertEl = document.getElementById('alert-message');
+  if (!alertEl) return;
+  const message = alertEl.textContent.trim();
+  if (message) showToast(message, 'success');
+  alertEl.remove();
+});
+
+document.addEventListener('click', (event) => {
+  const openTarget = event.target.closest('[data-open]');
+  if (openTarget) {
+    const key = openTarget.getAttribute('data-open');
+    if (key === 'global-post-modal') {
+      prepareGlobalPostModal();
+    }
+    if (key === 'home-tab-settings-drawer' && typeof refreshHomeTabSettings === 'function') {
+      refreshHomeTabSettings();
+    }
+    openDialogByKey(key);
+    return;
+  }
+
+  const closeTarget = event.target.closest('[data-close]');
+  if (closeTarget) {
+    const key = closeTarget.getAttribute('data-close');
+    closeDialogByKey(key);
+    return;
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const target = event.target.closest('[data-copy-link]');
+  if (!target) return;
+  event.preventDefault();
+  const url = target.getAttribute('data-copy-link');
+  if (!url) return;
+  const copyValue =
+    url.startsWith('http://') || url.startsWith('https://')
+      ? url
+      : `${window.location.origin}${url}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(copyValue)
+      .then(() => showToast('Link copied'))
+      .catch(() => {});
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const target = event.target.closest('[data-theme-toggle]');
+  if (!target) return;
+  event.preventDefault();
+  const currentTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(nextTheme);
+  try {
+    if (window.localStorage) {
+      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    }
+  } catch (_err) {
+    // ignore localStorage errors
+  }
+  showToast(nextTheme === 'dark' ? 'Dark mode enabled' : 'Dark mode disabled', 'success');
+  const menu = target.closest('details.profile-menu');
+  if (menu) menu.removeAttribute('open');
+});
+
+document.addEventListener('click', (event) => {
+  const openMenu = event.target.closest('details.feed-menu[open],details.profile-menu[open]');
+  if (openMenu) return;
+  document.querySelectorAll('details.feed-menu[open],details.profile-menu[open]').forEach((menu) => {
+    menu.removeAttribute('open');
+  });
+});
+
+document.addEventListener('click', (event) => {
+  const reactionToggle = event.target.closest('[data-reaction-toggle]');
+  if (reactionToggle) {
+    event.preventDefault();
+    const postId = reactionToggle.getAttribute('data-post-id');
+    if (!postId) return;
+    const picker = document.querySelector(`[data-reaction-picker][data-post-id="${postId}"]`);
+    if (!picker) return;
+    const willOpen = picker.classList.contains('hidden');
+    closeAllReactionPickers();
+    if (willOpen) picker.classList.remove('hidden');
+    return;
+  }
+  if (event.target.closest('[data-reaction-picker]')) return;
+  closeAllReactionPickers();
+});
+
+document.addEventListener('click', (event) => {
+  const target = event.target.closest('[data-action-url]');
+  if (!target) return;
+  event.preventDefault();
+  const actionType = target.getAttribute('data-action-type');
+  const url = target.getAttribute('data-action-url');
+  if (!url) return;
+  const csrfEl = document.getElementById('csrf-token');
+  const csrfParam = csrfEl?.dataset?.csrfParam;
+  const csrfToken = csrfEl?.value;
+  const formData = new FormData();
+  if (csrfParam && csrfToken) {
+    formData.append(csrfParam, csrfToken);
+  }
+  const emoji = target.getAttribute('data-emoji');
+  if (emoji) {
+    formData.append('emoji', emoji);
+  }
+  fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+  })
+    .then((res) =>
+      res
+        .json()
+        .then((data) => ({ ok: res.ok, data }))
+        .catch(() => ({ ok: res.ok, data: { message: 'Done' } }))
+    )
+    .then(({ ok, data }) => {
+      const message = data && data.message ? data.message : 'Done';
+      showToast(message, ok ? 'success' : 'error');
+      if (ok) handleActionSuccess(target, data);
+    })
+    .catch(() => showToast('Action failed', 'error'))
+    .finally(() => {
+      const menu = target.closest('details.feed-menu');
+      if (menu) menu.removeAttribute('open');
+      if (actionType === 'post-react') {
+        closeAllReactionPickers();
+      }
+    });
+});
+
+function showToast(message) {
+  const containerId = 'toast-container';
+  let container = document.getElementById(containerId);
+  if (!container) {
+    container = document.createElement('div');
+    container.id = containerId;
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  const variant = arguments.length > 1 ? arguments[1] : 'info';
+  toast.className = `toast toast--${variant}`;
+  const icon = variant === 'success' ? '✓' : variant === 'error' ? '⚠' : '•';
+  toast.innerHTML = `<span class=\"toast__icon\">${icon}</span><span>${message}</span>`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.classList.add('toast--show');
+  });
+  setTimeout(() => {
+    toast.classList.add('toast--hide');
+    setTimeout(() => toast.remove(), 200);
+  }, 1800);
+}
+
+function handleActionSuccess(target, data) {
+  const actionType = target.getAttribute('data-action-type');
+  if (!actionType) return;
+  const postId = target.getAttribute('data-post-id');
+  const userId = target.getAttribute('data-user-id');
+  if (actionType === 'post-like') {
+    if (!postId) return;
+    const isLiked = data && data.state === 'liked';
+    const likeCount = data && typeof data.count !== 'undefined' ? data.count : null;
+    document
+      .querySelectorAll(`[data-action-type=\"post-like\"][data-post-id=\"${postId}\"]`)
+      .forEach((button) => updateLikeButton(button, isLiked, likeCount));
+  }
+  if (actionType === 'post-react') {
+    if (!postId) return;
+    const selected = data && typeof data.selected === 'string' ? data.selected : '';
+    const reactions = Array.isArray(data?.reactions) ? data.reactions : [];
+    updateReactionSummary(postId, reactions);
+    updateReactionPickerState(postId, selected);
+  }
+  if (actionType === 'post-bookmark') {
+    if (!postId) return;
+    const isBookmarked = data && data.state === 'bookmarked';
+    document
+      .querySelectorAll(`[data-action-type=\"post-bookmark\"][data-post-id=\"${postId}\"]`)
+      .forEach((button) => updateBookmarkButton(button, isBookmarked));
+    if (!isBookmarked) {
+      document
+        .querySelectorAll(`[data-bookmark-item][data-post-id=\"${postId}\"]`)
+        .forEach((item) => item.remove());
+    }
+  }
+  if (actionType === 'post-watch') {
+    if (!postId) return;
+    const isWatching = data && data.state === 'watching';
+    document
+      .querySelectorAll(`[data-action-type=\"post-watch\"][data-post-id=\"${postId}\"]`)
+      .forEach((button) => updateWatchButton(button, isWatching));
+  }
+  if (actionType === 'user-follow') {
+    if (!userId) return;
+    const isFollowing = data && data.state === 'followed';
+    document
+      .querySelectorAll(`[data-action-type=\"user-follow\"][data-user-id=\"${userId}\"]`)
+      .forEach((button) => updateFollowButton(button, isFollowing));
+  }
+  if (actionType === 'post-block') {
+    if (!postId) return;
+    const item = document.querySelector(`[data-post-id=\"${postId}\"]`);
+    if (item) item.remove();
+  }
+}
+
+function updateReactionSummary(postId, reactions) {
+  const normalized = reactions
+    .filter((item) => item && typeof item.emoji === 'string' && typeof item.count === 'number' && item.count > 0)
+    .map((item) => ({ emoji: item.emoji, count: item.count }));
+  document
+    .querySelectorAll(`[data-reaction-summary][data-post-id="${postId}"]`)
+    .forEach((container) => {
+      container.innerHTML = '';
+      normalized.forEach((item) => {
+        const row = document.createElement('span');
+        row.className = 'inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-sm text-slate-700';
+        row.innerHTML = `<span>${item.emoji}</span><span>${item.count}</span>`;
+        container.appendChild(row);
+      });
+    });
+}
+
+function updateReactionPickerState(postId, selectedEmoji) {
+  document
+    .querySelectorAll(`[data-reaction-picker][data-post-id="${postId}"] [data-action-type="post-react"]`)
+    .forEach((button) => {
+      const emoji = button.getAttribute('data-emoji');
+      const isActive = emoji === selectedEmoji;
+      button.classList.toggle('bg-slate-900', isActive);
+      button.classList.toggle('text-white', isActive);
+      if (isActive) {
+        button.classList.add('hover:bg-slate-800');
+        button.classList.remove('hover:bg-slate-100');
+      } else {
+        button.classList.remove('hover:bg-slate-800');
+        button.classList.add('hover:bg-slate-100');
+      }
+    });
+}
+
+function updateLikeButton(button, isLiked, count) {
+  button.setAttribute('data-liked', isLiked ? 'true' : 'false');
+  const label = button.querySelector('[data-like-label]');
+  if (label) label.textContent = isLiked ? 'Liked' : 'Like';
+  const icon = button.querySelector('[data-like-icon]');
+  if (icon) icon.textContent = isLiked ? '♥' : '♡';
+  const countEl = button.querySelector('[data-like-count]');
+  if (countEl && count !== null) {
+    if (countEl.hasAttribute('data-count-plain')) {
+      countEl.textContent = `${count}`;
+    } else {
+      countEl.textContent = `(${count})`;
+    }
+  }
+}
+
+function updateBookmarkButton(button, isBookmarked) {
+  button.setAttribute('data-bookmarked', isBookmarked ? 'true' : 'false');
+  button.setAttribute('aria-label', isBookmarked ? 'Bookmarked' : 'Bookmark');
+  button.classList.toggle('text-slate-900', isBookmarked);
+  button.classList.toggle('text-slate-500', !isBookmarked);
+  const icon = button.querySelector('[data-bookmark-icon]');
+  if (icon) {
+    const path = icon.querySelector('path');
+    if (path) {
+      path.setAttribute('fill', isBookmarked ? 'currentColor' : 'none');
+    }
+  }
+}
+
+function updateFollowButton(button, isFollowing) {
+  button.setAttribute('data-following', isFollowing ? 'true' : 'false');
+  const label = button.querySelector('[data-follow-label]');
+  if (label) label.textContent = isFollowing ? 'Following' : 'Follow';
+}
+
+function updateWatchButton(button, isWatching) {
+  button.setAttribute('data-watching', isWatching ? 'true' : 'false');
+  const label = button.querySelector('[data-watch-label]');
+  if (label) label.textContent = isWatching ? 'Not watching' : 'Watch';
+  const icon = button.querySelector('[data-watch-icon]');
+  if (icon) icon.textContent = isWatching ? '🙈' : '👁';
+}
+
+document.addEventListener('click', (event) => {
+  const actionEl = event.target.closest('[data-action-url],[data-copy-link],[data-theme-toggle],details.feed-menu,summary.feed-menu__toggle,details.profile-menu,summary.profile-menu__summary');
+  if (actionEl) return;
+  const item = event.target.closest('[data-href]');
+  if (!item) return;
+  const url = item.getAttribute('data-href');
+  if (url) window.location.href = url;
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document
+    .querySelectorAll('[data-action-type=\"post-like\"][data-liked]')
+    .forEach((button) => {
+      const isLiked = button.getAttribute('data-liked') === 'true';
+      updateLikeButton(button, isLiked, null);
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document
+    .querySelectorAll('[data-action-type=\"post-bookmark\"][data-bookmarked]')
+    .forEach((button) => {
+      const isBookmarked = button.getAttribute('data-bookmarked') === 'true';
+      updateBookmarkButton(button, isBookmarked);
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document
+    .querySelectorAll('[data-action-type=\"user-follow\"][data-following]')
+    .forEach((button) => {
+      const isFollowing = button.getAttribute('data-following') === 'true';
+      updateFollowButton(button, isFollowing);
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document
+    .querySelectorAll('[data-action-type=\"post-watch\"][data-watching]')
+    .forEach((button) => {
+      const isWatching = button.getAttribute('data-watching') === 'true';
+      updateWatchButton(button, isWatching);
+    });
+});

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Testing (Hspec)"
+  short_description: "Yesod tests and specs"
+  default_prompt: "Use $testing-hspec to add or update Hspec/yesod-test specs."
+policy:
+  allow_implicit_invocation: true

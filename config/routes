@@ -1,0 +1,37 @@
+/static StaticR Static appStatic
+/auth   AuthR   Auth   getAuth
+
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/ HomeR GET
+/search SearchR GET
+/word/#WordId WordR GET
+/word/#WordId/comment WordCommentR POST
+/word/#WordId/like WordLikeR POST
+/word/#WordId/bookmark WordBookmarkR POST
+/comment/#WordCommentId/delete WordCommentDeleteR POST
+
+/notifications NotificationsR GET
+/notifications/read-all NotificationsReadAllR POST
+
+/register RegisterR GET POST
+/profile ProfileR GET POST
+/settings SettingsR GET
+/upload UploadR POST
+/files/#Text FileR GET
+
+/admin AdminR GET
+/admin/words AdminWordsR GET POST
+/admin/words/new AdminWordNewR GET
+/admin/words/edit/#WordId AdminWordEditR GET POST
+/admin/users AdminUsersR GET POST
+/admin/users/new AdminUserNewR GET
+/admin/users/id/#UserId AdminUserR GET POST
+/admin/settings AdminSettingsR GET POST
+/admin/settings/new AdminSettingNewR GET
+/admin/settings/id/#SiteSettingId AdminSettingR GET POST
+/admin/boards AdminBoardsR GET
+/admin/companies AdminCompaniesR GET
+/admin/company-categories AdminCompanyCategoriesR GET
+/admin/ads AdminAdsR GET

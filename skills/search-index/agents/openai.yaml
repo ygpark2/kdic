@@ -1,0 +1,6 @@
+interface:
+  display_name: "Search"
+  short_description: "Search routes and queries"
+  default_prompt: "Use $search-index to add or update search features."
+policy:
+  allow_implicit_invocation: true

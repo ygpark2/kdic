@@ -1,0 +1,6 @@
+interface:
+  display_name: "Run/Build"
+  short_description: "Stack/Makefile operations"
+  default_prompt: "Use $devops-run to run/build/operate this app locally."
+policy:
+  allow_implicit_invocation: true

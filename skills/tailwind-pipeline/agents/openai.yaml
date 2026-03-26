@@ -1,0 +1,6 @@
+interface:
+  display_name: "Tailwind Pipeline"
+  short_description: "Tailwind config and build"
+  default_prompt: "Use $tailwind-pipeline to update Tailwind CSS input/config and rebuild styles."
+policy:
+  allow_implicit_invocation: true

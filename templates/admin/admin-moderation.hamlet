@@ -1,0 +1,75 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">Moderation</h1>
+    <p class="mt-2 text-sm text-slate-600">Review blocked and flagged posts across the community.</p>
+
+  <form method=get action=@{AdminModerationR} class="flex flex-wrap gap-2">
+    <input name=q type=text value=#{q} placeholder="Search title or post" class="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+    <input name=user type=text value=#{userQuery} placeholder="Filter by user" class="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+    <select name=type class="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      $forall (value,label) <- listTypeOptions
+        $if value == typeQuery
+          <option value=#{value} selected>#{label}
+        $else
+          <option value=#{value}>#{label}
+    <select name=per_page class="rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      $forall size <- [10,20,50]
+        $if size == perPage
+          <option value=#{size} selected>#{size} / page
+        $else
+          <option value=#{size}>#{size} / page
+    <button class="rounded-xl border border-slate-900 px-3 py-2 text-sm font-semibold">Filter</button>
+
+  <section class="space-y-3">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-900">Post Flags</h2>
+      <span class="text-xs uppercase tracking-[0.3em] text-slate-400">#{length flagPostsPage}</span>
+    $if null flagPostsPage
+      <p class="text-sm text-slate-500">No flagged posts.</p>
+    $else
+      <div class="space-y-2">
+        $forall (flagId, userIdent, postTitle, preview, createdAt) <- flagPostsPage
+          <div class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <p class="font-semibold text-slate-900">#{postTitle}</p>
+            <p class="text-sm text-slate-600">#{preview}</p>
+            <p class="text-xs text-slate-500">Flagged by #{userIdent} · #{createdAt}</p>
+            <form method=post action=@{AdminModerationActionR} class="mt-2">
+              $maybe tok <- mCsrfToken
+                <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+              <input type=hidden name=action value="post-flag-delete">
+              <input type=hidden name=id value=#{toPathPiece flagId}>
+              <button class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-900 hover:text-slate-900">Remove
+    $if flagPostsPages > 1
+      <nav class="flex items-center gap-2 text-sm">
+        $if page > 1
+          <a href=@{AdminModerationR}#{pagePrefix}#{page - 1} class="rounded-lg border border-slate-200 px-2 py-1">Prev
+        <span>Page #{page} / #{flagPostsPages}
+        $if page < flagPostsPages
+          <a href=@{AdminModerationR}#{pagePrefix}#{page + 1} class="rounded-lg border border-slate-200 px-2 py-1">Next
+
+  <section class="space-y-3">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-900">Post Blocks</h2>
+      <span class="text-xs uppercase tracking-[0.3em] text-slate-400">#{length blockPostsPage}</span>
+    $if null blockPostsPage
+      <p class="text-sm text-slate-500">No blocked posts.</p>
+    $else
+      <div class="space-y-2">
+        $forall (blockId, userIdent, postTitle, preview, createdAt) <- blockPostsPage
+          <div class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <p class="font-semibold text-slate-900">#{postTitle}</p>
+            <p class="text-sm text-slate-600">#{preview}</p>
+            <p class="text-xs text-slate-500">Blocked by #{userIdent} · #{createdAt}</p>
+            <form method=post action=@{AdminModerationActionR} class="mt-2">
+              $maybe tok <- mCsrfToken
+                <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+              <input type=hidden name=action value="post-block-delete">
+              <input type=hidden name=id value=#{toPathPiece blockId}>
+              <button class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-900 hover:text-slate-900">Remove
+    $if blockPostsPages > 1
+      <nav class="flex items-center gap-2 text-sm">
+        $if page > 1
+          <a href=@{AdminModerationR}#{pagePrefix}#{page - 1} class="rounded-lg border border-slate-200 px-2 py-1">Prev
+        <span>Page #{page} / #{blockPostsPages}
+        $if page < blockPostsPages
+          <a href=@{AdminModerationR}#{pagePrefix}#{page + 1} class="rounded-lg border border-slate-200 px-2 py-1">Next

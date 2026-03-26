@@ -1,0 +1,22 @@
+<div class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Words</h1>
+      <p class="mt-2 text-sm text-slate-600">Create, update, and manage dictionary words.</p>
+    <a href=@{AdminWordNewR} class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Create word</a>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+    <h2 class="text-lg font-medium text-slate-900">Existing words</h2>
+    $if null words
+      <p class="mt-3 text-sm text-slate-500">No words yet.
+    $else
+      <ul class="mt-4 space-y-4">
+        $forall Entity wordId word <- words
+          <li class="rounded-xl border border-slate-200 bg-white p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-900">#{wordText word}
+                $maybe trans <- wordTranscription word
+                  <div class="text-sm text-slate-600">Transcription: #{trans}
+              <div class="flex items-center gap-3">
+                <a href=@{AdminWordEditR wordId} class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Edit</a>

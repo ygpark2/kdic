@@ -1,0 +1,6 @@
+interface:
+  display_name: "Profile Settings"
+  short_description: "User profile changes"
+  default_prompt: "Use $profile-settings to update profile handlers or templates."
+policy:
+  allow_implicit_invocation: true

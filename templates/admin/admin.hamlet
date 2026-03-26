@@ -1,0 +1,20 @@
+<h1 class="text-2xl font-semibold text-slate-900">Admin</h1>
+<p class="mt-2 text-sm text-slate-600">Manage boards, companies, company categories, users, settings, and ads.</p>
+<div class="mt-6 grid gap-4 sm:grid-cols-2">
+  <a href=@{AdminBoardsR} class="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white">
+    <span class="block text-lg font-medium">Boards</span>
+    <span class="block text-sm text-slate-500">Create, rename, delete boards</span>
+  <a href=@{AdminCompaniesR} class="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white">
+    <span class="block text-lg font-medium">Companies</span>
+    <span class="block text-sm text-slate-500">Create, edit, delete company entries</span>
+  <a href=@{AdminCompanyCategoriesR} class="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white">
+    <span class="block text-lg font-medium">Company Categories</span>
+    <span class="block text-sm text-slate-500">Create, rename, delete company categories</span>
+  <a href=@{AdminUsersR} class="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white">
+    <span class="block text-lg font-medium">Users</span>
+  <a href=@{AdminSettingsR} class="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white">
+    <span class="block text-lg font-medium">Settings</span>
+    <span class="block text-sm text-slate-500">Manage site settings</span>
+  <a href=@{AdminAdsR} class="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-slate-900 transition hover:border-slate-300 hover:bg-white">
+    <span class="block text-lg font-medium">Ads</span>
+    <span class="block text-sm text-slate-500">Manage right sidebar ads</span>

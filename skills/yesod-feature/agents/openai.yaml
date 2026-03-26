@@ -1,0 +1,6 @@
+interface:
+  display_name: "Yesod Feature"
+  short_description: "Routes, handlers, templates edits"
+  default_prompt: "Use $yesod-feature to add or modify a Yesod route/handler/template in this app."
+policy:
+  allow_implicit_invocation: true

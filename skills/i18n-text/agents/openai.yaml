@@ -1,0 +1,6 @@
+interface:
+  display_name: "Text & i18n"
+  short_description: "Copy and labels"
+  default_prompt: "Use $i18n-text to update user-facing copy or labels."
+policy:
+  allow_implicit_invocation: true

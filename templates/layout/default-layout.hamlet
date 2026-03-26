@@ -1,0 +1,55 @@
+$maybe msg <- mmsg
+  <div id="alert-message" class="fixed top-24 right-4 z-[100] rounded-xl border border-slate-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 shadow-lg animate-bounce">
+    #{msg}
+
+<div class="min-h-screen bg-white">
+    <!-- 상단 헤더: 브랜드 문구와 검색창 포함 -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-100 py-2">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- 좌측: 로고 -->
+                <div class="flex-shrink-0">
+                    <a href=@{HomeR} class="text-2xl font-black text-slate-900 tracking-tighter">
+                        #{siteTitle}
+                
+                <!-- 중앙: 검색 영역 -->
+                <div class="hidden md:flex flex-col items-center flex-1 max-w-md px-8">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Search the World's Stories</span>
+                    <form action=@{SearchR} method=get class="relative w-full group">
+                        <input type="text" name="q" placeholder="Explore words..." class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-slate-200 transition-all outline-none">
+                        <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></svg>
+                
+                <!-- 우측: 알림 및 메뉴 -->
+                <nav class="flex items-center gap-4 flex-shrink-0">
+                    $maybe viewer <- layoutViewer
+                        <a href=@{NotificationsR} class="p-2 text-slate-400 hover:text-slate-900 transition-colors relative">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5">
+                                <path d="M10 19a2 2 0 0 0 4 0">
+                            $if layoutUnreadNotificationCount > 0
+                                <span class="absolute top-1 right-1 h-4 w-4 bg-blue-600 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white">
+                                    #{layoutUnreadNotificationCount}
+                        
+                        <details class="relative">
+                            <summary class="list-none cursor-pointer">
+                                <div class="h-9 w-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-sm hover:scale-105 transition-transform">
+                                    #{T.toUpper (T.take 1 (userIdent viewer))}
+                            
+                            <div class="absolute right-0 mt-3 w-56 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] overflow-hidden py-2">
+                                <div class="px-4 py-2 mb-2">
+                                    <p class="text-xs text-slate-400">Signed in as
+                                    <p class="text-sm font-bold text-slate-900">#{userIdent viewer}
+                                <hr class="border-slate-50 mb-2">
+                                <a href=@{ProfileR} class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">View Profile
+                                <a href=@{SettingsR} class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Settings
+                                $if userRole viewer == "admin"
+                                    <a href=@{AdminR} class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-bold">Admin Panel
+                                <hr class="my-2 border-slate-50">
+                                <a href=@{AuthR LogoutR} class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Sign out
+                    $nothing
+                        <a href=@{AuthR LoginR} class="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors">Log in
+                        <a href=@{RegisterR} class="bg-slate-900 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">Join Free
+
+    <main>
+        ^{widget}

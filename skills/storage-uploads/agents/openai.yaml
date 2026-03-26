@@ -1,0 +1,6 @@
+interface:
+  display_name: "Storage & Uploads"
+  short_description: "Local/S3 uploads wiring"
+  default_prompt: "Use $storage-uploads to update upload handling or storage backends."
+policy:
+  allow_implicit_invocation: true

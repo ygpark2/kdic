@@ -1,0 +1,93 @@
+<div class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Companies</h1>
+      <p class="mt-2 text-sm text-slate-600">Manage a single company entry.</p>
+    <a href=@{AdminCompaniesR} class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Back to list</a>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+    $if null categories
+      <h2 class="text-lg font-medium text-slate-900">No company categories</h2>
+      <p class="mt-3 text-sm text-slate-500">Create at least one company category before managing companies.
+      <a href=@{AdminCompanyCategoriesR} class="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Go to company categories</a>
+    $elseif isNew
+      <h2 class="text-lg font-medium text-slate-900">Create company</h2>
+      <form method=post action=@{AdminCompaniesR} class="admin-form mt-4">
+        $maybe tok <- mCsrfToken
+          <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="company-name">Name</label>
+            <input id="company-name" type=text name=name placeholder="Acme Labs" required class="admin-form-input">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="company-category-id">Category</label>
+            <div class="admin-form-select-wrap">
+              <select id="company-category-id" name=categoryId class="admin-form-select">
+                $forall Entity categoryId category <- categories
+                  <option value=#{toPathPiece categoryId}>#{companyGroupName category}
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="company-website">Website</label>
+            <input id="company-website" type=text name=website placeholder="https://example.com" class="admin-form-input">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="company-location">Location</label>
+            <input id="company-location" type=text name=location placeholder="Seoul / Remote" class="admin-form-input">
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="company-size">Team size</label>
+            <input id="company-size" type=text name=size placeholder="51-200" class="admin-form-input">
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-full">
+            <label class="admin-form-label" for="company-description">Description</label>
+            <textarea id="company-description" name=description rows=7 placeholder="Company description" required class="admin-form-textarea"></textarea>
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label">&nbsp;</label>
+            <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Create</button>
+    $else
+      $maybe Entity companyId company <- mCompany
+        <h2 class="text-lg font-medium text-slate-900">Edit company</h2>
+        <form method=post action=@{AdminCompanyR companyId} class="admin-form mt-4">
+          $maybe tok <- mCsrfToken
+            <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+          <input type=hidden name=action value="update">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-name">Name</label>
+              <input id="edit-company-name" type=text name=name value=#{companyName company} required class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-category-id">Category</label>
+              <div class="admin-form-select-wrap">
+                <select id="edit-company-category-id" name=categoryId class="admin-form-select">
+                  $forall Entity categoryId category <- categories
+                    <option value=#{toPathPiece categoryId} :companyCategory company == categoryId:selected>#{companyGroupName category}
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-website">Website</label>
+              <input id="edit-company-website" type=text name=website value=#{fromMaybe "" (companyWebsite company)} class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-location">Location</label>
+              <input id="edit-company-location" type=text name=location value=#{fromMaybe "" (companyLocation company)} class="admin-form-input">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-size">Team size</label>
+              <input id="edit-company-size" type=text name=size value=#{fromMaybe "" (companySize company)} class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-created-by">Created by</label>
+              <input id="edit-company-created-by" type=text value=#{fromMaybe "Unknown" categoryAuthorName} readonly class="admin-form-input">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-full">
+              <label class="admin-form-label" for="edit-company-description">Description</label>
+              <textarea id="edit-company-description" name=description rows=7 required class="admin-form-textarea">#{companyDescription company}</textarea>
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label">&nbsp;</label>
+              <button class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Save</button>
+        <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+          <div class="text-sm font-semibold text-slate-900">Delete company</div>
+          <p class="mt-2 text-sm text-slate-500">Deleting removes this company entry from the directory.
+          <form method=post action=@{AdminCompanyR companyId} class="mt-4">
+            $maybe tok <- mCsrfToken
+              <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+            <input type=hidden name=action value="delete">
+            <button class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Delete company</button>

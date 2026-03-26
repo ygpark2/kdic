@@ -1,0 +1,6 @@
+interface:
+  display_name: "Persistent Schema"
+  short_description: "Models, migrations, seed data"
+  default_prompt: "Use $persistent-schema to update models or migrations for this app."
+policy:
+  allow_implicit_invocation: true

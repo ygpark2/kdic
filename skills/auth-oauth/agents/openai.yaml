@@ -1,0 +1,6 @@
+interface:
+  display_name: "Auth & OAuth"
+  short_description: "Login and OAuth providers"
+  default_prompt: "Use $auth-oauth to update authentication or OAuth providers in this app."
+policy:
+  allow_implicit_invocation: true

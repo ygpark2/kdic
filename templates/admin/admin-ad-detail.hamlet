@@ -1,0 +1,74 @@
+<div class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Ads</h1>
+      <p class="mt-2 text-sm text-slate-600">Manage ad details.</p>
+    <a href=@{AdminAdsR} class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Back to list</a>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+    $if isNew
+      <h2 class="text-lg font-medium text-slate-900">Create ad</h2>
+      <form method=post action=@{AdminAdsR} class="admin-form mt-4">
+        $maybe tok <- mCsrfToken
+          <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="ad-title">Title</label>
+            <input id="ad-title" type=text name=title placeholder="Title" required class="admin-form-input">
+          <div class="admin-form-col admin-form-col-half">
+            <label class="admin-form-label" for="ad-link">Link</label>
+            <input id="ad-link" type=text name=link placeholder="Link (optional)" class="admin-form-input">
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-full">
+            <label class="admin-form-label" for="ad-body">Body</label>
+            <textarea id="ad-body" name=body rows=5 placeholder="Body" required class="admin-form-textarea"></textarea>
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label" for="ad-position">Position</label>
+            <input id="ad-position" type=text name=position value="sidebar-right" required class="admin-form-input">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label" for="ad-sort">Sort</label>
+            <input id="ad-sort" type=number name=sortOrder value=0 required class="admin-form-input">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label">&nbsp;</label>
+            <label class="flex items-center gap-2 text-sm text-slate-700">
+              <input type=checkbox name=isActive checked class="rounded border-slate-300">
+              Active
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label">&nbsp;</label>
+            <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Create</button>
+    $else
+      $maybe Entity adId ad <- mAd
+        <h2 class="text-lg font-medium text-slate-900">Edit ad</h2>
+        <form method=post action=@{AdminAdR adId} class="admin-form mt-4">
+          $maybe tok <- mCsrfToken
+            <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+          <input type=hidden name=action value="update">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-ad-title">Title</label>
+              <input id="edit-ad-title" type=text name=title value=#{adTitle ad} required class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-ad-link">Link</label>
+              <input id="edit-ad-link" type=text name=link value=#{fromMaybe "" (adLink ad)} class="admin-form-input">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-full">
+              <label class="admin-form-label" for="edit-ad-body">Body</label>
+              <textarea id="edit-ad-body" name=body rows=5 required class="admin-form-textarea">#{adBody ad}</textarea>
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label" for="edit-ad-position">Position</label>
+              <input id="edit-ad-position" type=text name=position value=#{adPosition ad} required class="admin-form-input">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label" for="edit-ad-sort">Sort</label>
+              <input id="edit-ad-sort" type=number name=sortOrder value=#{adSortOrder ad} required class="admin-form-input">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label">&nbsp;</label>
+              <label class="flex items-center gap-2 text-sm text-slate-700">
+                <input type=checkbox name=isActive :adIsActive ad:checked class="rounded border-slate-300">
+                Active
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label">&nbsp;</label>
+              <button class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Save</button>

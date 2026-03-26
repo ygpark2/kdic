@@ -1,0 +1,21 @@
+$newline never
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>#{pageTitle pc}
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    ^{pageHead pc}
+
+    <link rel="stylesheet" href=@{StaticR css_tailwind_css}>
+  <body class="bg-[#eceeee] text-slate-900">
+    <div class="min-h-screen flex flex-col">
+      <main class="flex-1">
+        <div class="mx-auto w-full max-w-[1216px] px-2 py-3 md:px-3">
+          ^{pageBody pc}
+      <footer class="text-slate-500">
+        <div class="mx-auto w-full max-w-[1216px] px-2 py-4 text-xs text-center md:px-3">
+          #{appCopyright $ appSettings master}

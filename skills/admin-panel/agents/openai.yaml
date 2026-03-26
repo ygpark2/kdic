@@ -1,0 +1,6 @@
+interface:
+  display_name: "Admin Panel"
+  short_description: "Admin routes and templates"
+  default_prompt: "Use $admin-panel to update admin routes, handlers, or templates."
+policy:
+  allow_implicit_invocation: true

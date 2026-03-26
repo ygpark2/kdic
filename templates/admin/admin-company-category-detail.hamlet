@@ -1,0 +1,65 @@
+<div class="space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Company Categories</h1>
+      <p class="mt-2 text-sm text-slate-600">Manage a single company category.</p>
+    <a href=@{AdminCompanyCategoriesR} class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Back to list</a>
+
+  <section class="rounded-xl border border-slate-200 bg-slate-50 p-6">
+    $if isNew
+      <h2 class="text-lg font-medium text-slate-900">Create company category</h2>
+      <form method=post action=@{AdminCompanyCategoriesR} class="admin-form mt-4">
+        $maybe tok <- mCsrfToken
+          <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-full">
+            <label class="admin-form-label" for="company-category-name">Name</label>
+            <input id="company-category-name" type=text name=name placeholder="Fintech" required class="admin-form-input">
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-full">
+            <label class="admin-form-label" for="company-category-description">Description</label>
+            <textarea id="company-category-description" name=description rows=5 placeholder="Category description" class="admin-form-textarea"></textarea>
+        <div class="admin-form-row">
+          <div class="admin-form-col admin-form-col-third">
+            <label class="admin-form-label">&nbsp;</label>
+            <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Create</button>
+    $else
+      $maybe Entity categoryId category <- mCategory
+        <h2 class="text-lg font-medium text-slate-900">Edit company category</h2>
+        <form method=post action=@{AdminCompanyCategoryR categoryId} class="admin-form mt-4">
+          $maybe tok <- mCsrfToken
+            <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+          <input type=hidden name=action value="update">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-category-name">Name</label>
+              <input id="edit-company-category-name" type=text name=name value=#{companyGroupName category} required class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-category-count">Companies</label>
+              <input id="edit-company-category-count" type=text value=#{tshow companyCount} readonly class="admin-form-input">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-category-author">Created by</label>
+              <input id="edit-company-category-author" type=text value=#{fromMaybe "Unknown" categoryAuthorName} readonly class="admin-form-input">
+            <div class="admin-form-col admin-form-col-half">
+              <label class="admin-form-label" for="edit-company-category-created-at">Created at</label>
+              <input id="edit-company-category-created-at" type=text value=#{tshow (companyGroupCreatedAt category)} readonly class="admin-form-input">
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-full">
+              <label class="admin-form-label" for="edit-company-category-description">Description</label>
+              <textarea id="edit-company-category-description" name=description rows=5 class="admin-form-textarea">#{fromMaybe "" (companyGroupDescription category)}</textarea>
+          <div class="admin-form-row">
+            <div class="admin-form-col admin-form-col-third">
+              <label class="admin-form-label">&nbsp;</label>
+              <button class="rounded-xl border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900">Save</button>
+        <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+          <div class="text-sm font-semibold text-slate-900">Delete category</div>
+          $if companyCount > 0
+            <p class="mt-2 text-sm text-slate-500">This category has #{companyCount} companies, so it cannot be deleted.
+          $else
+            <p class="mt-2 text-sm text-slate-500">This category can be deleted because it is not used by any company.
+            <form method=post action=@{AdminCompanyCategoryR categoryId} class="mt-4">
+              $maybe tok <- mCsrfToken
+                <input type=hidden name=#{defaultCsrfParamName} value=#{tok}>
+              <input type=hidden name=action value="delete">
+              <button class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Delete category</button>

@@ -1,0 +1,48 @@
+# Values formatted like "_env:ENV_VAR_NAME:default_value" can be overridden by the specified environment variable.
+# See https://github.com/yesodweb/yesod/wiki/Configuration#overriding-configuration-values-with-environment-variables
+
+static-dir: "_env:STATIC_DIR:static"
+host: "_env:HOST:*4" # any IPv4 host
+port: "_env:PORT:3000"
+approot: "_env:APPROOT:http://localhost:3000"
+ip-from-header: "_env:IP_FROM_HEADER:false"
+
+# Optional values with the following production defaults.
+# In development, they default to the inverse.
+#
+# development: false
+# detailed-logging: false
+# should-log-all: false
+# reload-templates: false
+# mutable-static: false
+# skip-combining: false
+
+database:
+  database: "_env:SQLITE_DATABASE:data/kdic.sqlite3"
+  poolsize: "_env:SQLITE_POOLSIZE:10"
+
+storage:
+  backend: "_env:STORAGE_BACKEND:local" # "local" | "s3"
+
+  local:
+    rootDir: "_env:STORAGE_LOCAL_ROOT:data/uploads"
+    publicBaseUrl: "_env:STORAGE_LOCAL_PUBLIC_BASE:/files" # 다운로드 라우트 prefix (예: /files/<key>)
+
+  s3:
+    bucket: "_env:STORAGE_S3_BUCKET:"
+    region: "_env:STORAGE_S3_REGION:ap-northeast-2"
+    # RustFS 같은 S3-compatible면 endpoint 지정
+    endpoint: "_env:STORAGE_S3_ENDPOINT:" # 예: "http://127.0.0.1:9000"
+    forcePathStyle: "_env:STORAGE_S3_FORCE_PATH_STYLE:true" # S3-compatible는 true가 안전한 편
+    publicBaseUrl: "_env:STORAGE_S3_PUBLIC_BASE:" # (선택) CDN/프록시 URL 있으면 지정
+
+oauth2:
+  google-client-id: "_env:GOOGLE_CLIENT_ID:"
+  google-client-secret: "_env:GOOGLE_CLIENT_SECRET:"
+  kakao-client-id: "_env:KAKAO_CLIENT_ID:"
+  kakao-client-secret: "_env:KAKAO_CLIENT_SECRET:"
+  naver-client-id: "_env:NAVER_CLIENT_ID:"
+  naver-client-secret: "_env:NAVER_CLIENT_SECRET:"
+
+copyright: Insert copyright statement here
+#analytics: UA-YOURCODE

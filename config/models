@@ -1,0 +1,87 @@
+User
+    ident Text
+    password Text Maybe
+    role Text default='user'
+    name Text Maybe
+    description Text Maybe
+    UniqueUser ident
+    deriving Typeable
+Email
+    email Text
+    user UserId Maybe
+    verkey Text Maybe
+    UniqueEmail email
+
+Word
+    text Text
+    transcription Text Maybe
+    pronunciationUrl Text Maybe
+    UniqueWord text
+    deriving Typeable
+
+Meaning
+    word WordId
+    partOfSpeech Text Maybe -- noun, verb, etc.
+    definition Text
+    deriving Typeable
+
+Example
+    meaning MeaningId
+    sentence Text
+    translation Text Maybe
+    deriving Typeable
+
+WordComment
+    word WordId
+    author UserId
+    content Text
+    parentComment WordCommentId Maybe
+    createdAt UTCTime
+    updatedAt UTCTime
+    deriving Typeable
+
+WordLike
+    user UserId
+    word WordId
+    createdAt UTCTime
+    UniqueWordLike user word
+    deriving Typeable
+
+WordBookmark
+    user UserId
+    word WordId
+    createdAt UTCTime
+    UniqueWordBookmark user word
+    deriving Typeable
+
+Following
+    follower UserId
+    followee UserId
+    createdAt UTCTime
+    UniqueFollowing follower followee
+    deriving Typeable
+
+Notification
+    user UserId
+    actor UserId Maybe
+    kind Text
+    word WordId Maybe
+    comment WordCommentId Maybe
+    isRead Bool default=False
+    createdAt UTCTime
+    deriving Typeable
+
+Upload
+    ownerId UserId
+    storageKey Text
+    originalName Text
+    contentType Text Maybe
+    sizeBytes Int Maybe
+    createdAt UTCTime
+    deriving Typeable
+
+SiteSetting
+    key Text
+    value Text
+    UniqueSiteSetting key
+    deriving Typeable
