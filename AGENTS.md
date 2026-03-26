@@ -1,46 +1,53 @@
-# HKForum Agent Notes
+# kdic (Social Word Dictionary) Agent Notes
 
 ## Overview
-- Haskell/Yesod web app for a forum with boards, threads, posts, comments, admin, and uploads.
-- Build tool: Stack (resolver `lts-24.28`). Project metadata in `package.yaml` and `kdic.cabal`.
+- Haskell/Yesod web application that combines a dictionary (words, meanings, examples) with SNS features (word stories/comments, likes, bookmarks, notifications).
+- UI: Modern 3-column layout (Wonderful.dev style) with Dictionary.com inspired word headers.
+- Build tool: Stack. Project metadata in `package.yaml`.
 - DB: SQLite via Persistent; migrations in `src/Model.hs` from `config/models`.
 - Templates: Hamlet/Lucius/Julius in `templates/`.
-- Static assets in `static/`. Tailwind CSS build in `config/front/`.
+- Styling: Tailwind CSS (build config in `config/front/`).
+
+## Key Features
+- **Dictionary**: Detailed word pages with pronunciation, part of speech, definitions, and multiple examples.
+- **SNS (Word Stories)**: Users can share stories or usage tips for words via a threaded comment system.
+- **Interactions**: Like and bookmark words; follow other users.
+- **Notifications**: Real-time alerts for interactions on shared stories.
+- **Admin Panel**: Manage words, users, and site-wide settings.
+
+## 3-Column Layout Structure
+The application uses a consistent 12-column grid system (`grid-cols-12`):
+- **Left (col-span-3)**: Exploration menu (Home, Trending, Notifications).
+- **Center (col-span-6)**: Main content (Search results, Word details, Social feed).
+- **Right (col-span-3)**: Contextual info (Popular tags, Word statistics, Daily word).
 
 ## Key Paths
-- App entry: `app/main.hs`, `src/Application.hs`, `src/Foundation.hs`.
-- Routes: `config/routes`.
-- Models: `config/models` (compiled by `src/Model.hs`).
-- Settings: `config/settings.yml`, `src/Settings.hs`.
-- Handlers: `src/Handler/**`.
-- Storage (local/S3): `src/Storage.hs`.
-- Templates: `templates/**`.
-- Tests: `test/**`.
+- **App Core**: `app/main.hs`, `src/Application.hs`, `src/Foundation.hs`.
+- **Routes**: `config/routes`.
+- **Models**: `config/models` (compiled by `src/Model.hs`).
+- **Handlers**: `src/Handler/` (e.g., `Word.hs`, `Home.hs`, `Admin.hs`).
+- **Templates**: `templates/` (Hamlet files for HTML).
+- **CSS**: `config/front/tailwind.input.css` (source), `static/css/tailwind.css` (generated).
 
 ## Runtime & Config
-- Settings load order:
-  - `config/settings.yml` compiled into the binary.
-  - `.env` (loaded at runtime) and environment variables override settings.
-- Default DB path: `data/kdic.sqlite3`.
-- Storage backend:
-  - `STORAGE_BACKEND=local|s3`.
-  - Local uploads stored under `data/uploads` and served from `/files/<key>`.
-  - S3 uploads use the `aws` CLI (must be installed); optional endpoint and path-style.
-- OAuth2: Google/Kakao/Naver configured via env vars in `config/settings.yml`.
+- **Settings**: Loaded from `config/settings.yml`, overridden by `.env` or environment variables.
+- **Database**: Default at `data/kdic.sqlite3`.
+- **Authentication**: Email/Password + OAuth2 (Google, Kakao, Naver).
+- **Migrations**: `runMigrationUnsafe` is used in `src/Application.hs` for seamless development updates.
 
 ## Development Commands
-- Build: `stack build`
-- Run (prod-ish): `stack run kdic`
-- Run (dev flags): `stack build --flag kdic:dev && stack exec kdic`
-- Tests: `stack test`
-- Tailwind build: `make tailwind` (uses `config/front/package.json`)
+- **Rebuild Project**: `make rebuild` (clean + build)
+- **Start Server**: `make start` (runs on port 3004)
+- **Fast Dev Run**: `make dev-start` (uses dev flags)
+- **Tailwind Build**: `make tailwind` (Required after changing CSS classes in templates)
+- **Test**: `stack test`
 
 ## Seed Data
-- On startup, migrations run and seed defaults:
-  - Inserts a `general` board and `thread_preview_chars` site setting.
-  - Ensures admin user `ygpark2` exists (default password `1234`) and is role `admin`.
+On first run, the app:
+- Ensures an admin user `ygpark2` exists (password `1234`).
+- Seeds an initial word ("Yesod") with definitions and examples.
 
 ## Notes For Changes
-- Add or change routes in `config/routes`, then implement handlers in `src/Handler/**`.
-- Change the data model in `config/models` and run migrations at app start (already wired in `src/Application.hs`).
-- Templates are wired via `$(widgetFile "path")` and live under `templates/`.
+- **CSS**: If you add new Tailwind classes to `.hamlet` files, you MUST run `make tailwind`.
+- **Routes**: Define in `config/routes`, then implement in `src/Handler/`.
+- **Logic**: Use `src/Import.hs` or `src/Import/NoFoundation.hs` for common imports. Note that `Word` is hidden from `ClassyPrelude` to avoid collision with the `Word` entity.
