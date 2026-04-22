@@ -96,13 +96,29 @@ instance Yesod App where
         "config/client_session_key.aes"
 
     -- The page to be redirected to when authentication is required.
-    authRoute _ = Just $ AuthR LoginR
+    authRoute _ = Just $ FrontendAppPathR ["login"]
 
     -- Routes not requiring authentication.
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
     isAuthorized HomeR _ = return Authorized
+    isAuthorized (FrontendAppPathR _) _ = return Authorized
+    isAuthorized ApiHomeR _ = return Authorized
+    isAuthorized ApiSearchR _ = return Authorized
+    isAuthorized (ApiWordR _) _ = return Authorized
+    isAuthorized (ApiWordCommentR _) _ = return Authorized
+    isAuthorized (ApiWordLikeR _) _ = return Authorized
+    isAuthorized (ApiWordBookmarkR _) _ = return Authorized
+    isAuthorized (ApiCommentDeleteR _) _ = return Authorized
+    isAuthorized ApiNotificationsR _ = return Authorized
+    isAuthorized ApiNotificationsReadAllR _ = return Authorized
+    isAuthorized ApiAuthLoginR _ = return Authorized
+    isAuthorized ApiAuthRegisterR _ = return Authorized
+    isAuthorized ApiAuthLogoutR _ = return Authorized
+    isAuthorized ApiSessionR _ = return Authorized
+    isAuthorized ApiMeR _ = return Authorized
+    isAuthorized ApiMeUpdateR _ = return Authorized
     isAuthorized SearchR _ = return Authorized
     isAuthorized (WordR _) _ = return Authorized
     
@@ -131,7 +147,11 @@ instance Yesod App where
     isAuthorized AdminWordNewR _ = isAdmin
     isAuthorized (AdminWordEditR _) _ = isAdmin
     isAuthorized AdminUsersR _ = isAdmin
+    isAuthorized AdminUserNewR _ = isAdmin
+    isAuthorized (AdminUserR _) _ = isAdmin
     isAuthorized AdminSettingsR _ = isAdmin
+    isAuthorized AdminSettingNewR _ = isAdmin
+    isAuthorized (AdminSettingR _) _ = isAdmin
     
     -- Default to Authorized for now.
     isAuthorized _ _ = return Authorized
@@ -168,8 +188,8 @@ instance YesodPersistRunner App where
 
 instance YesodAuth App where
     type AuthId App = UserId
-    loginDest _ = HomeR
-    logoutDest _ = HomeR
+    loginDest _ = FrontendAppPathR []
+    logoutDest _ = FrontendAppPathR []
     redirectToReferer _ = False
     authHttpManager = getYesod >>= return P.. getHttpManager
     authPlugins app =
@@ -186,7 +206,7 @@ instance YesodAuth App where
 
     authenticate creds = liftHandler $ runDB $ do
         let ident =
-                if credsPlugin creds == "hashdb"
+                if credsPlugin creds `elem` ["hashdb", "api"]
                     then credsIdent creds
                     else credsPlugin creds <> ":" <> credsIdent creds
         mUser <- getBy $ UniqueUser ident

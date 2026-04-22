@@ -2,6 +2,7 @@ TAILWIND_DIR=./config/front
 TAILWIND_INPUT=$(TAILWIND_DIR)/tailwind.input.css
 TAILWIND_CONFIG=$(TAILWIND_DIR)/tailwind.config.js
 TAILWIND_OUTPUT=./static/css/tailwind.css
+FRONTEND_DIR=./frontend
 
 .PHONY: tailwind
 tailwind:
@@ -12,6 +13,11 @@ tailwind:
 rebuild:
 	@stack clean && stack build
 
+.PHONY: frontend-build
+frontend-build:
+	@command -d $(FRONTEND_DIR)/node_modules >/dev/null 2>&1 || (cd $(FRONTEND_DIR) && npm install)
+	@cd $(FRONTEND_DIR) && npm run build
+
 .PHONY: start
 start:
 	@PORT=3004 APPROOT=http://localhost:3004 stack run kdic
@@ -19,7 +25,15 @@ start:
 .PHONY: dev-start
 dev-start:
 	# @stack exec -- yesod devel
-	@PORT=3004 APPROOT=http://localhost:3004 stack build --flag kdic:dev && PORT=3004 APPROOT=http://localhost:3004 stack exec kdic
+	@$(MAKE) frontend-build
+	@PORT=3004 APPROOT=http://localhost:3004 stack build --flag kdic:dev
+	@PORT=3004 APPROOT=http://localhost:3004 stack exec kdic & \
+		pid=$$!; \
+		trap 'kill $$pid >/dev/null 2>&1 || true' INT TERM EXIT; \
+		sleep 2; \
+		echo ""; \
+		echo "Accessible at: http://localhost:3004"; \
+		wait $$pid
 
 .PHONY: start-bg
 start-bg:

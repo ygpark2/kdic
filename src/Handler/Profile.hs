@@ -9,16 +9,11 @@ import Import
 import Text.Blaze (preEscapedText)
 
 getProfileR :: Handler Html
-getProfileR = do
-    userId <- requireAuthId
-    user <- runDB $ get404 userId
-    (widget, enctype) <- generateFormPost (profileForm user)
-    defaultLayout $ do
-        setTitle $ preEscapedText "Edit profile"
-        $(widgetFile "profile")
+getProfileR =
+    redirect $ FrontendAppPathR ["profile"]
 
 getSettingsR :: Handler Html
-getSettingsR = redirect ProfileR
+getSettingsR = redirect $ FrontendAppPathR ["profile"]
 
 postProfileR :: Handler Html
 postProfileR = do

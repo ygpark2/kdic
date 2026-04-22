@@ -1,14 +1,22 @@
-<div class="max-w-6xl mx-auto admin-layout">
-  <aside class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2">
-    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Admin
-    <nav class="space-y-2 text-sm font-medium">
-      <a href=@{AdminBoardsR} class="block rounded-lg px-3 py-2 #{menuClass "boards"}">Boards
-      <a href=@{AdminCompaniesR} class="block rounded-lg px-3 py-2 #{menuClass "companies"}">Companies
-      <a href=@{AdminCompanyCategoriesR} class="block rounded-lg px-3 py-2 #{menuClass "company-categories"}">Company Categories
-      <a href=@{AdminUsersR} class="block rounded-lg px-3 py-2 #{menuClass "users"}">Users
-      <a href=@{AdminSettingsR} class="block rounded-lg px-3 py-2 #{menuClass "settings"}">Settings
-      <a href=@{AdminAdsR} class="block rounded-lg px-3 py-2 #{menuClass "ads"}">Ads
-      <a href=@{AdminModerationR} class="block rounded-lg px-3 py-2 #{menuClass "moderation"}">Moderation
-      <a href=@{AdminModerationLogsR} class="block rounded-lg px-3 py-2 #{menuClass "moderation-logs"}">Moderation Logs
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    ^{adminBody}
+<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:flex-row lg:px-6">
+  <aside class="lg:sticky lg:top-6 lg:h-fit lg:w-[280px]">
+    <div class="overflow-hidden rounded-[28px] border-[4px] border-black bg-[#fff6df] shadow-[10px_10px_0_#000]">
+      <div class="border-b-[4px] border-black bg-[#57d5e5] px-5 py-5">
+        <p class="text-xs font-black uppercase tracking-[0.32em] text-black/70">Kdic admin
+        <h1 class="mt-2 text-2xl font-black text-black">Control room
+        <p class="mt-2 text-sm leading-6 text-black/70">Keep the existing management layout, but with the yesblog visual language applied.
+      <nav class="space-y-3 p-4 text-sm font-bold">
+        <a href=@{AdminR} class="block rounded-[20px] px-4 py-3 #{menuClass "overview"}">Overview
+        <a href=@{AdminWordsR} class="block rounded-[20px] px-4 py-3 #{menuClass "words"}">Words
+        <a href=@{AdminUsersR} class="block rounded-[20px] px-4 py-3 #{menuClass "users"}">Users
+        <a href=@{AdminSettingsR} class="block rounded-[20px] px-4 py-3 #{menuClass "settings"}">Settings
+      <div class="border-t-[4px] border-black bg-white px-5 py-4">
+        <p class="text-xs font-bold uppercase tracking-[0.28em] text-slate-500">Scope
+        <p class="mt-2 text-sm leading-6 text-slate-700">This admin now reflects the actual `kdic` schema: words, users, and site settings.
+  <section class="min-w-0 flex-1">
+    <div class="overflow-hidden rounded-[32px] border-[4px] border-black bg-white shadow-[12px_12px_0_#000]">
+      <div class="border-b-[4px] border-black bg-[#fff9ef] px-6 py-5">
+        <p class="text-xs font-black uppercase tracking-[0.32em] text-slate-500">Admin workspace
+        <p class="mt-2 text-sm leading-6 text-slate-600">Operational views stay in place; only the visual system is shifted toward the yesblog frontend.
+      <div class="px-6 py-6 sm:px-8">
+        ^{adminBody}

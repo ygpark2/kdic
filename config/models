@@ -16,6 +16,7 @@ Word
     text Text
     transcription Text Maybe
     pronunciationUrl Text Maybe
+    creator UserId Maybe
     UniqueWord text
     deriving Typeable
 

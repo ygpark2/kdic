@@ -5,6 +5,25 @@
 /robots.txt RobotsR GET
 
 / HomeR GET
+/app/*Texts FrontendAppPathR GET
+
+/api/home ApiHomeR GET
+/api/search ApiSearchR GET
+/api/words ApiWordsR POST
+/api/word/#WordId ApiWordR GET
+/api/word/#WordId/comment ApiWordCommentR POST
+/api/word/#WordId/like ApiWordLikeR POST
+/api/word/#WordId/bookmark ApiWordBookmarkR POST
+/api/comment/#WordCommentId/delete ApiCommentDeleteR POST
+/api/notifications ApiNotificationsR GET
+/api/notifications/read-all ApiNotificationsReadAllR POST
+/api/auth/login ApiAuthLoginR POST
+/api/auth/register ApiAuthRegisterR POST
+/api/auth/logout ApiAuthLogoutR POST
+/api/session ApiSessionR GET
+/api/me ApiMeR GET
+/api/me/update ApiMeUpdateR POST
+
 /search SearchR GET
 /word/#WordId WordR GET
 /word/#WordId/comment WordCommentR POST
@@ -31,7 +50,3 @@
 /admin/settings AdminSettingsR GET POST
 /admin/settings/new AdminSettingNewR GET
 /admin/settings/id/#SiteSettingId AdminSettingR GET POST
-/admin/boards AdminBoardsR GET
-/admin/companies AdminCompaniesR GET
-/admin/company-categories AdminCompanyCategoriesR GET
-/admin/ads AdminAdsR GET

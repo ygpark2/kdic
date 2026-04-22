@@ -3,43 +3,11 @@ module Handler.Word where
 
 import Import
 import Data.Time (getCurrentTime)
-import qualified Data.Map as Map
 import qualified Data.Text as T
 
 getWordR :: WordId -> Handler Html
-getWordR wordId = do
-    word <- runDB $ get404 wordId
-    meanings <- runDB $ selectList [MeaningWord ==. wordId] []
-    let meaningIds = map entityKey meanings
-    examples <- runDB $ selectList [ExampleMeaning <-. meaningIds] []
-    comments <- runDB $ selectList [WordCommentWord ==. wordId] [Desc WordCommentCreatedAt]
-    
-    let meaningsWithExamples = map (\(Entity mid m) -> (Entity mid m, filter (\(Entity _ ex) -> exampleMeaning ex == mid) examples)) meanings
-
-    -- Get author information for comments
-    let authorIds = ordNub $ map (wordCommentAuthor . entityVal) comments
-    authors <- runDB $ selectList [UserId <-. authorIds] []
-    let authorMap = Map.fromList $ map (\(Entity uid u) -> (uid, u)) authors
-    
-    mUserId <- maybeAuthId
-    isLiked <- case mUserId of
-        Nothing -> return False
-        Just uid -> runDB $ exists [WordLikeUser ==. uid, WordLikeWord ==. wordId]
-        
-    isBookmarked <- case mUserId of
-        Nothing -> return False
-        Just uid -> runDB $ exists [WordBookmarkUser ==. uid, WordBookmarkWord ==. wordId]
-
-    let likeClass = if isLiked 
-                        then "bg-red-50 text-red-600 border border-red-200" :: Text 
-                        else "bg-white text-slate-400 border border-slate-200 hover:text-slate-600"
-    let bookmarkClass = if isBookmarked 
-                            then "bg-amber-50 text-amber-600 border border-amber-200" :: Text 
-                            else "bg-white text-slate-400 border border-slate-200 hover:text-slate-600"
-
-    defaultLayout $ do
-        setTitle $ toHtml $ wordText word
-        $(widgetFile "word")
+getWordR wordId =
+    redirect $ FrontendAppPathR ["words", toPathPiece wordId]
 
 postWordCommentR :: WordId -> Handler Html
 postWordCommentR wordId = do

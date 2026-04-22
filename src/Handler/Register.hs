@@ -13,9 +13,8 @@ renderRegister widget enctype = do
         $(widgetFile "register")
 
 getRegisterR :: Handler Html
-getRegisterR = do
-    (widget, enctype) <- generateFormPost registerForm
-    renderRegister widget enctype
+getRegisterR =
+    redirect $ FrontendAppPathR ["register"]
 
 postRegisterR :: Handler Html
 postRegisterR = do
@@ -28,7 +27,7 @@ postRegisterR = do
                     user <- liftIO $ setPassword pwd (User ident Nothing "user" Nothing Nothing)
                     _ <- runDB $ insert user
                     setMessage "Registration successful. Please login."
-                    redirect $ AuthR LoginR
+                    redirect $ FrontendAppPathR ["login"]
                 Just _ -> do
                       setMessage "Username already exists."
                       renderRegister widget enctype

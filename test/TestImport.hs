@@ -5,13 +5,13 @@ module TestImport
     ) where
 
 import Application           (makeFoundation)
-import ClassyPrelude         as X hiding (delete, deleteBy, Handler)
+import ClassyPrelude         as X hiding (delete, deleteBy, Handler, Word)
 import Database.Persist      as X hiding (get)
 import Database.Persist.Sql  (SqlPersistM, SqlBackend, runSqlPersistMPool, rawExecute, rawSql, unSingle)
 import Foundation            as X
-import Model                 as X
+import Model                 as X hiding (Example, Word)
 import qualified Prelude as P
-import Test.Hspec            as X
+import Test.Hspec            as X hiding (Example)
 import Text.Shakespeare.Text (st)
 import Yesod.Default.Config2 (ignoreEnv, loadAppSettings)
 import Yesod.Test            as X
@@ -28,8 +28,11 @@ runDB query = do
     pool <- fmap appConnPool getTestYesod
     liftIO $ runSqlPersistMPool query pool
 
-withApp :: SpecWith App -> Spec
-withApp = before $ do
+withApp :: YesodSpec App -> Spec
+withApp specs = yesodSpecWithSiteGenerator appGenerator specs
+
+appGenerator :: IO App
+appGenerator = do
     settings <- loadAppSettings
         ["config/test-settings.yml", "config/settings.yml"]
         []
@@ -60,8 +63,9 @@ wipeDB app = do
 
     flip runSqlPersistMPool pool $ do
         tables <- getTables
-        let quotedName t = "\"" <> t <> "\""
-            queries = P.map (\t -> "DELETE FROM " <> quotedName t) tables
+        let orderedTables = orderedTableNames tables
+            quotedName t = "\"" <> t <> "\""
+            queries = P.map (\t -> "DELETE FROM " <> quotedName t) orderedTables
         forM_ queries (\q -> rawExecute q [])
 
 rawConnection :: Text -> IO Sqlite.Connection
@@ -73,4 +77,23 @@ disableForeignKeys conn = Sqlite.prepare conn "PRAGMA foreign_keys = OFF;" >>= (
 getTables :: MonadIO m => ReaderT SqlBackend m [Text]
 getTables = do
     tables <- rawSql "SELECT name FROM sqlite_master WHERE type = 'table';" []
-    return (fmap unSingle tables)
+    return $ filter (not . ("sqlite_" `isPrefixOf`)) (fmap unSingle tables)
+
+orderedTableNames :: [Text] -> [Text]
+orderedTableNames tables =
+    let preferredOrder =
+            [ "notification"
+            , "following"
+            , "word_bookmark"
+            , "word_like"
+            , "word_comment"
+            , "example"
+            , "meaning"
+            , "upload"
+            , "email"
+            , "site_setting"
+            , "word"
+            , "user"
+            ]
+        remaining = filter (`notElem` preferredOrder) tables
+    in filter (`elem` tables) preferredOrder ++ remaining
