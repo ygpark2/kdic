@@ -4,7 +4,8 @@
   import ExploreNav from '$lib/components/ExploreNav.svelte';
   import WordFeedCard from '$lib/components/WordFeedCard.svelte';
   import { apiFormPost } from '$lib/api';
-  import type { ApiMe, ApiSession, ApiWordSummary } from '$lib/types';
+  import { initialLabel } from '$lib/format';
+  import type { ApiMe, ApiSession, ApiWordSubmissionSummary, ApiWordSummary } from '$lib/types';
 
   interface Props {
     data: ApiMe & {
@@ -18,13 +19,13 @@
   let message = $state('');
   let formError = $state('');
   let submitting = $state(false);
-  let myWords = $state<ApiWordSummary[]>([]);
+  let mySubmissions = $state<ApiWordSubmissionSummary[]>([]);
   let bookmarks = $state<ApiWordSummary[]>([]);
   let hydrated = $state(false);
 
   $effect(() => {
     if (hydrated) return;
-    myWords = data.myWords;
+    mySubmissions = data.mySubmissions;
     bookmarks = data.bookmarks;
     hydrated = true;
   });
@@ -35,14 +36,14 @@
     submitting = true;
 
     try {
-      const response = await apiFormPost<{ word: ApiWordSummary; message: string }>(
+      const response = await apiFormPost<{ submission: ApiWordSubmissionSummary; message: string }>(
         '/api/words',
         new URLSearchParams({
           text: wordText,
           transcription
         })
       );
-      myWords = [response.word, ...myWords];
+      mySubmissions = [response.submission, ...mySubmissions];
       wordText = '';
       transcription = '';
       message = response.message;
@@ -62,8 +63,8 @@
         <p class="rail-label">Library</p>
         <div class="stat-grid stat-grid-compact">
           <div class="stat-card">
-            <strong>{myWords.length}</strong>
-            <span>My words</span>
+            <strong>{mySubmissions.length}</strong>
+            <span>Submissions</span>
           </div>
           <div class="stat-card">
             <strong>{bookmarks.length}</strong>
@@ -77,8 +78,8 @@
   <section class="main-panel">
     <div class="main-panel-header">
       <p class="section-kicker">New word</p>
-      <h1 class="section-title">Add a word to your personal dictionary stream.</h1>
-      <p class="section-copy">Register a new word, keep your own list, and review the words you bookmarked.</p>
+      <h1 class="section-title">Submit a word for community review.</h1>
+      <p class="section-copy">New words stay in the submission queue until voting and admin approval promote them into the official dictionary.</p>
     </div>
 
     <section class="form-card">
@@ -102,7 +103,7 @@
 
       <div class="action-row">
         <button class="action-link" type="button" onclick={submitWord} disabled={submitting}>
-          {submitting ? 'Saving...' : 'Register word'}
+          {submitting ? 'Submitting...' : 'Submit word'}
         </button>
       </div>
     </section>
@@ -110,21 +111,34 @@
     <section class="feed-section">
       <div class="section-row">
         <div>
-          <p class="section-kicker">My words</p>
-          <h2 class="subsection-title">Words you added</h2>
+          <p class="section-kicker">My submissions</p>
+          <h2 class="subsection-title">Words awaiting review</h2>
         </div>
-        <span class="chip">{myWords.length} words</span>
+        <span class="chip">{mySubmissions.length} submissions</span>
       </div>
 
-      {#if myWords.length}
+      {#if mySubmissions.length}
         <div class="feed-list">
-          {#each myWords as word}
-            <WordFeedCard word={word} eyebrow="My word" copy="is now part of your dictionary collection." />
+          {#each mySubmissions as submission}
+            <div class="story-card">
+              <div class="story-avatar">{initialLabel(submission.text)}</div>
+              <div class="story-body">
+                <div class="story-meta">
+                  <strong>{submission.status}</strong>
+                  {#if submission.transcription}
+                    <span>[{submission.transcription}]</span>
+                  {/if}
+                </div>
+                <p class="story-copy">
+                  <strong class="story-word">{submission.text}</strong> has {submission.voteCount} votes and is {submission.status}.
+                </p>
+              </div>
+            </div>
           {/each}
         </div>
       {:else}
         <div class="empty-card">
-          <p>You have not added any words yet.</p>
+          <p>You have not submitted any words yet.</p>
         </div>
       {/if}
     </section>
@@ -157,7 +171,7 @@
       <AuthPanel session={data.session} />
       <section class="rail-card rail-stack">
         <p class="rail-label">Tips</p>
-        <p class="rail-copy">Use short, unique word text first. You can enrich definitions and stories from the word detail page later.</p>
+        <p class="rail-copy">Use short, unique word text first. Approved submissions become official word pages after admin review.</p>
       </section>
     </div>
   </svelte:fragment>

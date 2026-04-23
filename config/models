@@ -16,8 +16,27 @@ Word
     text Text
     transcription Text Maybe
     pronunciationUrl Text Maybe
-    creator UserId Maybe
     UniqueWord text
+    deriving Typeable
+
+WordSubmission
+    text Text
+    transcription Text Maybe
+    pronunciationUrl Text Maybe
+    creator UserId
+    status Text default='pending'
+    submittedAt UTCTime
+    updatedAt UTCTime
+    approvedAt UTCTime Maybe
+    approvedBy UserId Maybe
+    promotedWord WordId Maybe
+    deriving Typeable
+
+WordSubmissionVote
+    user UserId
+    submission WordSubmissionId
+    createdAt UTCTime
+    UniqueWordSubmissionVote user submission
     deriving Typeable
 
 Meaning

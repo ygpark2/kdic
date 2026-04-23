@@ -3,6 +3,7 @@ module Handler.Admin where
 
 import Import
 import Yesod.Auth.HashDB (setPassword)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 
 getAdminR :: Handler Html
@@ -10,6 +11,7 @@ getAdminR = do
     totalWords <- runDB $ count ([] :: [Filter Word])
     totalUsers <- runDB $ count ([] :: [Filter User])
     totalSettings <- runDB $ count ([] :: [Filter SiteSetting])
+    pendingSubmissions <- runDB $ count [WordSubmissionStatus ==. pendingStatus]
     recentWords <- runDB $ selectList [] [Desc WordId, LimitTo 4]
     adminPage "overview" "Admin" $(widgetFile "admin/admin")
 
@@ -22,7 +24,7 @@ postAdminWordsR :: Handler Html
 postAdminWordsR = do
     text <- runInputPost $ ireq textField "text"
     transcription <- runInputPost $ iopt textField "transcription"
-    _ <- runDB $ insert $ Word text transcription Nothing Nothing
+    _ <- runDB $ insert $ Word text transcription Nothing
     setMessage "Word added."
     redirect AdminWordsR
 
@@ -56,6 +58,60 @@ postAdminWordEditR wordId = do
     runDB $ update wordId [WordText =. text, WordTranscription =. transcription]
     setMessage "Word updated."
     redirect AdminWordsR
+
+getAdminSubmissionsR :: Handler Html
+getAdminSubmissionsR = do
+    submissions <- runDB $ selectList [] [Desc WordSubmissionSubmittedAt]
+    creatorMap <- loadAdminUserMap $ map (wordSubmissionCreator . entityVal) submissions
+    voteCountMap <- loadAdminSubmissionVoteCounts submissions
+    mCsrfToken <- reqToken <$> getRequest
+    let creatorLabel submission =
+            maybe "Unknown user" userIdent (Map.lookup (wordSubmissionCreator submission) creatorMap)
+        voteCount submissionId =
+            fromMaybe 0 (Map.lookup submissionId voteCountMap)
+    adminPage "submissions" "Admin - Word Submissions" $(widgetFile "admin/submissions")
+
+postAdminSubmissionApproveR :: WordSubmissionId -> Handler Html
+postAdminSubmissionApproveR submissionId = do
+    adminId <- requireAuthId
+    submission <- runDB $ get404 submissionId
+    if wordSubmissionStatus submission /= pendingStatus
+        then setMessage "Only pending submissions can be approved."
+        else do
+            existingWord <- runDB $ getBy $ UniqueWord (wordSubmissionText submission)
+            wordId <- case existingWord of
+                Just (Entity existingWordId _) ->
+                    pure existingWordId
+                Nothing ->
+                    runDB $ insert $
+                        Word
+                            (wordSubmissionText submission)
+                            (wordSubmissionTranscription submission)
+                            (wordSubmissionPronunciationUrl submission)
+            now <- liftIO getCurrentTime
+            runDB $ update submissionId
+                [ WordSubmissionStatus =. approvedStatus
+                , WordSubmissionUpdatedAt =. now
+                , WordSubmissionApprovedAt =. Just now
+                , WordSubmissionApprovedBy =. Just adminId
+                , WordSubmissionPromotedWord =. Just wordId
+                ]
+            setMessage "Submission approved and promoted to an official word."
+    redirect AdminSubmissionsR
+
+postAdminSubmissionRejectR :: WordSubmissionId -> Handler Html
+postAdminSubmissionRejectR submissionId = do
+    submission <- runDB $ get404 submissionId
+    if wordSubmissionStatus submission /= pendingStatus
+        then setMessage "Only pending submissions can be rejected."
+        else do
+            now <- liftIO getCurrentTime
+            runDB $ update submissionId
+                [ WordSubmissionStatus =. rejectedStatus
+                , WordSubmissionUpdatedAt =. now
+                ]
+            setMessage "Submission rejected."
+    redirect AdminSubmissionsR
 
 getAdminUsersR :: Handler Html
 getAdminUsersR = do
@@ -105,6 +161,8 @@ postAdminUserR userId = do
             if Just userId == mViewerId
                 then setMessage "You cannot delete the account you are currently using."
                 else do
+                    userSubmissions <- runDB $ selectList [WordSubmissionCreator ==. userId] []
+                    let userSubmissionIds = map entityKey userSubmissions
                     runDB $ deleteWhere [NotificationUser ==. userId]
                     runDB $ deleteWhere [NotificationActor ==. Just userId]
                     runDB $ deleteWhere [FollowingFollower ==. userId]
@@ -112,8 +170,13 @@ postAdminUserR userId = do
                     runDB $ deleteWhere [WordBookmarkUser ==. userId]
                     runDB $ deleteWhere [WordLikeUser ==. userId]
                     runDB $ deleteWhere [WordCommentAuthor ==. userId]
+                    runDB $ deleteWhere [WordSubmissionVoteUser ==. userId]
+                    unless (null userSubmissionIds) $
+                        runDB $ deleteWhere [WordSubmissionVoteSubmission <-. userSubmissionIds]
+                    runDB $ updateWhere [WordSubmissionApprovedBy ==. Just userId] [WordSubmissionApprovedBy =. Nothing]
                     runDB $ deleteWhere [UploadOwnerId ==. userId]
                     runDB $ deleteWhere [EmailUser ==. Just userId]
+                    runDB $ deleteWhere [WordSubmissionCreator ==. userId]
                     runDB $ delete userId
                     setMessage "User deleted."
             redirect AdminUsersR
@@ -223,3 +286,32 @@ upsertSetting key value = do
         Nothing -> do
             _ <- runDB $ insert $ SiteSetting key value
             pure ()
+
+loadAdminUserMap :: [UserId] -> Handler (Map.Map UserId User)
+loadAdminUserMap userIds
+    | null uniqueIds = pure Map.empty
+    | otherwise = do
+        users <- runDB $ selectList [UserId <-. uniqueIds] []
+        pure $ Map.fromList $ map (\(Entity userId user) -> (userId, user)) users
+  where
+    uniqueIds = ordNub userIds
+
+loadAdminSubmissionVoteCounts :: [Entity WordSubmission] -> Handler (Map.Map WordSubmissionId Int)
+loadAdminSubmissionVoteCounts submissions
+    | null submissionIds = pure Map.empty
+    | otherwise = do
+        counts <- forM submissionIds $ \submissionId -> do
+            voteCount <- runDB $ count [WordSubmissionVoteSubmission ==. submissionId]
+            pure (submissionId, voteCount)
+        pure $ Map.fromList counts
+  where
+    submissionIds = map entityKey submissions
+
+pendingStatus :: Text
+pendingStatus = "pending"
+
+approvedStatus :: Text
+approvedStatus = "approved"
+
+rejectedStatus :: Text
+rejectedStatus = "rejected"

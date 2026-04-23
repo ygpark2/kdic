@@ -96,20 +96,24 @@ instance Yesod App where
         "config/client_session_key.aes"
 
     -- The page to be redirected to when authentication is required.
-    authRoute _ = Just $ FrontendAppPathR ["login"]
+    authRoute _ = Just FrontendLoginR
 
     -- Routes not requiring authentication.
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
     isAuthorized HomeR _ = return Authorized
-    isAuthorized (FrontendAppPathR _) _ = return Authorized
+    isAuthorized (FrontendAssetR _) _ = return Authorized
+    isAuthorized FrontendNewWordR _ = return Authorized
+    isAuthorized FrontendLoginR _ = return Authorized
+    isAuthorized (FrontendWordDetailR _) _ = return Authorized
     isAuthorized ApiHomeR _ = return Authorized
     isAuthorized ApiSearchR _ = return Authorized
     isAuthorized (ApiWordR _) _ = return Authorized
     isAuthorized (ApiWordCommentR _) _ = return Authorized
     isAuthorized (ApiWordLikeR _) _ = return Authorized
     isAuthorized (ApiWordBookmarkR _) _ = return Authorized
+    isAuthorized (ApiWordSubmissionVoteR _) _ = return Authorized
     isAuthorized (ApiCommentDeleteR _) _ = return Authorized
     isAuthorized ApiNotificationsR _ = return Authorized
     isAuthorized ApiNotificationsReadAllR _ = return Authorized
@@ -146,6 +150,9 @@ instance Yesod App where
     isAuthorized AdminWordsR _ = isAdmin
     isAuthorized AdminWordNewR _ = isAdmin
     isAuthorized (AdminWordEditR _) _ = isAdmin
+    isAuthorized AdminSubmissionsR _ = isAdmin
+    isAuthorized (AdminSubmissionApproveR _) _ = isAdmin
+    isAuthorized (AdminSubmissionRejectR _) _ = isAdmin
     isAuthorized AdminUsersR _ = isAdmin
     isAuthorized AdminUserNewR _ = isAdmin
     isAuthorized (AdminUserR _) _ = isAdmin
@@ -188,8 +195,8 @@ instance YesodPersistRunner App where
 
 instance YesodAuth App where
     type AuthId App = UserId
-    loginDest _ = FrontendAppPathR []
-    logoutDest _ = FrontendAppPathR []
+    loginDest _ = HomeR
+    logoutDest _ = HomeR
     redirectToReferer _ = False
     authHttpManager = getYesod >>= return P.. getHttpManager
     authPlugins app =

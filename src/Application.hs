@@ -12,7 +12,6 @@ module Application
     -- * for GHCI
     , handler
     , db
-    , getFrontendAppPathR
     ) where
 
 import Control.Monad.Logger                 (LoggingT, liftLoc, runLoggingT)
@@ -35,8 +34,7 @@ import qualified Data.Text as T
 import System.Directory                    (createDirectoryIfMissing, doesFileExist,
                                              makeAbsolute)
 import System.Environment                  (setEnv)
-import System.FilePath                     (takeDirectory, takeExtension, (</>))
-import qualified System.FilePath as FP
+import System.FilePath                     (takeDirectory)
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
 
@@ -137,7 +135,7 @@ seedInitialWords = do
     case mYesod of
         Just _ -> return ()
         Nothing -> do
-            wordId <- insert $ Word "Yesod" (Just "ye-sod") Nothing Nothing
+            wordId <- insert $ Word "Yesod" (Just "ye-sod") Nothing
             meaningId <- insert $ Meaning wordId (Just "noun") "A Haskell web framework for productive development of type-safe, RESTful web applications."
             void $ insert $ Example meaningId "I built my first dictionary SNS with Yesod." (Just "나는 Yesod로 나의 첫 번째 사전 SNS를 만들었다.")
             
@@ -154,7 +152,7 @@ seedInitialWords = do
     case mHaskell of
         Just _ -> return ()
         Nothing -> do
-            wordId <- insert $ Word "Haskell" (Just "has-kel") Nothing Nothing
+            wordId <- insert $ Word "Haskell" (Just "has-kel") Nothing
             meaningId <- insert $ Meaning wordId (Just "noun") "A standard, purely functional programming language with non-strict semantics and strong static typing."
             void $ insert $ Example meaningId "Haskell is known for its elegant syntax and powerful abstraction capabilities." (Just "Haskell은 우아한 구문과 강력한 추상화 능력으로 잘 알려져 있다.")
             
@@ -170,7 +168,7 @@ seedInitialWords = do
     case mRefactor of
         Just _ -> return ()
         Nothing -> do
-            wordId <- insert $ Word "Refactor" (Just "ree-fak-ter") Nothing Nothing
+            wordId <- insert $ Word "Refactor" (Just "ree-fak-ter") Nothing
             meaningId <- insert $ Meaning wordId (Just "verb") "Restructure existing computer code without changing its external behavior."
             void $ insert $ Example meaningId "I am refactoring the dictionary app to make it a social network." (Just "나는 이 사전 앱을 소셜 네트워크로 만들기 위해 리팩토링하고 있다.")
 
@@ -179,7 +177,7 @@ seedInitialWords = do
     case mSNS of
         Just _ -> return ()
         Nothing -> do
-            wordId <- insert $ Word "SNS" (Just "ess-enn-ess") Nothing Nothing
+            wordId <- insert $ Word "SNS" (Just "ess-enn-ess") Nothing
             meaningId <- insert $ Meaning wordId (Just "noun") "Social Networking Service; an online platform which people use to build social networks or social relationships."
             void $ insert $ Example meaningId "This site is a dictionary-based SNS." (Just "이 사이트는 사전 기반의 SNS이다.")
 
@@ -307,40 +305,3 @@ handler h = getAppSettings >>= makeFoundation >>= flip unsafeHandler h
 -- | Run DB queries
 db :: ReaderT SqlBackend (HandlerFor App) a -> IO a
 db = handler P.. runDB
-
-getFrontendAppPathR :: [Text] -> Handler TypedContent
-getFrontendAppPathR pieces = serveFrontendPath pieces
-
-serveFrontendPath :: [Text] -> Handler TypedContent
-serveFrontendPath pieces = do
-    app <- getYesod
-    let staticRoot = appStaticDir $ appSettings app
-        frontendRoot = staticRoot </> "app"
-        relativePath = FP.joinPath $ map unpack pieces
-        requestedPath =
-            if null pieces
-                then frontendRoot </> "index.html"
-                else frontendRoot </> relativePath
-        fallbackPath = frontendRoot </> "index.html"
-    fallbackExists <- liftIO $ doesFileExist fallbackPath
-    unless fallbackExists notFound
-    requestedExists <- liftIO $ doesFileExist requestedPath
-    let targetPath = if requestedExists then requestedPath else fallbackPath
-        contentType = frontendContentType targetPath
-    sendFile contentType targetPath
-
-frontendContentType :: FilePath -> ContentType
-frontendContentType path =
-    case takeExtension path of
-        ".html" -> "text/html; charset=utf-8"
-        ".js" -> "application/javascript; charset=utf-8"
-        ".css" -> "text/css; charset=utf-8"
-        ".json" -> "application/json; charset=utf-8"
-        ".svg" -> "image/svg+xml"
-        ".png" -> "image/png"
-        ".jpg" -> "image/jpeg"
-        ".jpeg" -> "image/jpeg"
-        ".webp" -> "image/webp"
-        ".woff" -> "font/woff"
-        ".woff2" -> "font/woff2"
-        _ -> "application/octet-stream"

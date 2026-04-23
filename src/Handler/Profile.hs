@@ -6,14 +6,15 @@ module Handler.Profile
     ) where
 
 import Import
+import Handler.Common (serveFrontendPath)
 import Text.Blaze (preEscapedText)
 
-getProfileR :: Handler Html
+getProfileR :: Handler TypedContent
 getProfileR =
-    redirect $ FrontendAppPathR ["profile"]
+    serveFrontendPath ["profile"]
 
 getSettingsR :: Handler Html
-getSettingsR = redirect $ FrontendAppPathR ["profile"]
+getSettingsR = redirect ProfileR
 
 postProfileR :: Handler Html
 postProfileR = do

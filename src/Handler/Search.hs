@@ -2,11 +2,8 @@
 module Handler.Search where
 
 import Import
+import Handler.Common (serveFrontendPath)
 
-getSearchR :: Handler Html
-getSearchR = do
-    mQuery <- lookupGetParam "q"
-    redirect $ maybe
-        (FrontendAppPathR ["search"], [] :: [(Text, Text)])
-        (\queryText -> (FrontendAppPathR ["search"], [("q", queryText)]))
-        mQuery
+getSearchR :: Handler TypedContent
+getSearchR =
+    serveFrontendPath ["search"]

@@ -24,7 +24,7 @@ spec = withApp $ do
         bodyContains "\"ident\":\"api-smoke\""
 
     yit "supports liking and bookmarking a word through the API" $ do
-        wordId <- runDB $ insert $ M.Word "TestWord" (Just "test-word") Nothing Nothing
+        wordId <- runDB $ insert $ M.Word "TestWord" (Just "test-word") Nothing
 
         request $ do
             setMethod "POST"
@@ -53,7 +53,7 @@ spec = withApp $ do
         bodyContains "\"bookmarkCount\":1"
         bodyContains "\"likeCount\":1"
 
-    yit "allows an authenticated user to create a word and returns it in myWords" $ do
+    yit "submits a user word, supports voting, and lets an admin promote it" $ do
         request $ do
             setMethod "POST"
             setUrl ApiAuthRegisterR
@@ -68,9 +68,48 @@ spec = withApp $ do
             addPostParam "text" "FreshWord"
             addPostParam "transcription" "fresh-word"
         statusIs 200
+        bodyContains "\"kind\":\"submission\""
+        bodyContains "\"status\":\"pending\""
         bodyContains "\"text\":\"FreshWord\""
 
         get ApiMeR
         statusIs 200
-        bodyContains "\"myWords\":["
+        bodyContains "\"mySubmissions\":["
         bodyContains "\"text\":\"FreshWord\""
+
+        submissionId <- runDB $ do
+            mSubmission <- selectFirst [M.WordSubmissionText ==. "FreshWord"] []
+            case mSubmission of
+                Just (Entity sid _) -> pure sid
+                Nothing -> error "Expected FreshWord submission"
+
+        request $ do
+            setMethod "POST"
+            setUrl (ApiWordSubmissionVoteR submissionId)
+        statusIs 200
+        bodyContains "\"active\":true"
+        bodyContains "\"count\":1"
+
+        request $ do
+            setMethod "GET"
+            setUrl ApiSearchR
+            addGetParam "q" "FreshWord"
+        statusIs 200
+        bodyContains "\"kind\":\"submission\""
+
+        runDB $ do
+            mUser <- getBy $ M.UniqueUser "api-word-owner"
+            case mUser of
+                Just (Entity userId _) -> update userId [M.UserRole =. "admin"]
+                Nothing -> error "Expected api-word-owner user"
+
+        request $ do
+            setMethod "POST"
+            setUrl (AdminSubmissionApproveR submissionId)
+        statusIs 303
+
+        runDB $ do
+            mWord <- getBy $ M.UniqueWord "FreshWord"
+            case mWord of
+                Just _ -> pure ()
+                Nothing -> error "Expected FreshWord to be promoted to Word"

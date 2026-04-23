@@ -4,9 +4,9 @@ import TestImport
 
 spec :: Spec
 spec = withApp $ do
-    yit "redirects the legacy homepage to the split frontend" $ do
+    yit "serves the frontend homepage at the root route" $ do
         get HomeR
-        statusIs 303
+        statusIs 200
 
     yit "serves an anonymous session payload from the public API" $ do
         get ApiSessionR

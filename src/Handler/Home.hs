@@ -2,7 +2,8 @@
 module Handler.Home where
 
 import Import
+import Handler.Common (serveFrontendPath)
 
-getHomeR :: Handler Html
+getHomeR :: Handler TypedContent
 getHomeR =
-    redirect $ FrontendAppPathR []
+    serveFrontendPath []

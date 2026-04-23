@@ -249,6 +249,8 @@ button {
 
 .main-panel {
   background: linear-gradient(140deg, #ffffff 0%, #fff6bf 100%);
+  display: grid;
+  gap: 34px;
 }
 
 .main-panel-header,
@@ -256,6 +258,20 @@ button {
 .word-hero {
   display: grid;
   gap: 20px;
+}
+
+.main-panel-header,
+.feed-section,
+.form-card {
+  position: relative;
+}
+
+.feed-section {
+  z-index: 1;
+}
+
+.form-card {
+  z-index: 0;
 }
 
 .section-kicker,
@@ -458,6 +474,10 @@ button {
   text-decoration: none;
 }
 
+.word-card-muted {
+  background: linear-gradient(140deg, #ffffff 0%, #e4fbff 100%);
+}
+
 .word-card > div {
   min-width: 0;
 }
@@ -536,6 +556,11 @@ button {
   padding: 22px;
 }
 
+.form-card {
+  display: grid;
+  gap: 26px;
+}
+
 .definition-copy {
   font-size: 1.16rem;
 }
@@ -562,7 +587,7 @@ button {
 
 .field {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .field span {

@@ -2,6 +2,7 @@
 module Handler.Register where
 
 import Import
+import Handler.Common (serveFrontendPath)
 import Yesod.Auth.HashDB (setPassword)
 import Text.Blaze (preEscapedText)
 
@@ -12,9 +13,9 @@ renderRegister widget enctype = do
         setTitle $ preEscapedText "Register"
         $(widgetFile "register")
 
-getRegisterR :: Handler Html
+getRegisterR :: Handler TypedContent
 getRegisterR =
-    redirect $ FrontendAppPathR ["register"]
+    serveFrontendPath ["register"]
 
 postRegisterR :: Handler Html
 postRegisterR = do
@@ -27,7 +28,7 @@ postRegisterR = do
                     user <- liftIO $ setPassword pwd (User ident Nothing "user" Nothing Nothing)
                     _ <- runDB $ insert user
                     setMessage "Registration successful. Please login."
-                    redirect $ FrontendAppPathR ["login"]
+                    redirect FrontendLoginR
                 Just _ -> do
                       setMessage "Username already exists."
                       renderRegister widget enctype

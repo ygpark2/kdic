@@ -2,10 +2,11 @@
 module Handler.Notifications where
 
 import Import
+import Handler.Common (serveFrontendPath)
 
-getNotificationsR :: Handler Html
+getNotificationsR :: Handler TypedContent
 getNotificationsR =
-    redirect $ FrontendAppPathR ["notifications"]
+    serveFrontendPath ["notifications"]
 
 postNotificationsReadAllR :: Handler Html
 postNotificationsReadAllR = do

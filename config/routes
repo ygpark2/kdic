@@ -5,7 +5,10 @@
 /robots.txt RobotsR GET
 
 / HomeR GET
-/app/*Texts FrontendAppPathR GET
+/_app/*Texts FrontendAssetR GET
+/new-word FrontendNewWordR GET
+/login FrontendLoginR GET
+/words/#WordId FrontendWordDetailR GET
 
 /api/home ApiHomeR GET
 /api/search ApiSearchR GET
@@ -14,6 +17,7 @@
 /api/word/#WordId/comment ApiWordCommentR POST
 /api/word/#WordId/like ApiWordLikeR POST
 /api/word/#WordId/bookmark ApiWordBookmarkR POST
+/api/submissions/#WordSubmissionId/vote ApiWordSubmissionVoteR POST
 /api/comment/#WordCommentId/delete ApiCommentDeleteR POST
 /api/notifications ApiNotificationsR GET
 /api/notifications/read-all ApiNotificationsReadAllR POST
@@ -44,6 +48,9 @@
 /admin/words AdminWordsR GET POST
 /admin/words/new AdminWordNewR GET
 /admin/words/edit/#WordId AdminWordEditR GET POST
+/admin/submissions AdminSubmissionsR GET
+/admin/submissions/#WordSubmissionId/approve AdminSubmissionApproveR POST
+/admin/submissions/#WordSubmissionId/reject AdminSubmissionRejectR POST
 /admin/users AdminUsersR GET POST
 /admin/users/new AdminUserNewR GET
 /admin/users/id/#UserId AdminUserR GET POST

@@ -39,19 +39,35 @@ getApiHomeR = do
 getApiSearchR :: Handler Value
 getApiSearchR = do
     mQuery <- cleanOptionalText <$> lookupGetParam "q"
+    mViewer <- maybeAuth
+    let mViewerId = entityKey <$> mViewer
     words <-
         case mQuery of
             Nothing -> pure []
             Just queryText -> do
                 allWords <- runDB $ selectList [] [Asc WordText, LimitTo 200]
                 pure $ take 50 $ filter (matchesQuery queryText . entityVal) allWords
+    submissions <-
+        case mQuery of
+            Nothing -> pure []
+            Just queryText -> do
+                allSubmissions <- runDB $ selectList [WordSubmissionStatus ==. pendingStatus] [Asc WordSubmissionText, LimitTo 200]
+                pure $ take 50 $ filter (matchesSubmissionQuery queryText . entityVal) allSubmissions
+    creatorMap <- loadUserMap $ map (wordSubmissionCreator . entityVal) submissions
+    voteCountMap <- loadSubmissionVoteCounts submissions
+    votedSubmissionIds <- loadViewerSubmissionVotes mViewerId (map entityKey submissions)
+    let items =
+            map wordValue words
+                ++ map (wordSubmissionValue mViewerId creatorMap voteCountMap votedSubmissionIds) submissions
     featuredWords <- runDB $ selectList [] [Asc WordText, LimitTo 4]
     returnJson $ object
-        [ "items" .= map wordValue words
+        [ "items" .= items
         , "featuredWords" .= map wordValue featuredWords
         , "meta" .= object
             [ "query" .= mQuery
-            , "total" .= length words
+            , "total" .= length items
+            , "officialTotal" .= length words
+            , "submissionTotal" .= length submissions
             ]
         ]
 
@@ -69,11 +85,16 @@ postApiWordsR = do
     existingWord <- runDB $ getBy $ UniqueWord text
     when (isJust existingWord) $
         apiError status400 "That word already exists."
-    wordId <- runDB $ insert $ Word text transcription Nothing (Just userId)
-    word <- runDB $ get404 wordId
+    existingSubmission <- runDB $ selectFirst [WordSubmissionText ==. text, WordSubmissionStatus <-. [pendingStatus, approvedStatus]] []
+    when (isJust existingSubmission) $
+        apiError status400 "That word is already in review."
+    now <- liftIO getCurrentTime
+    submissionId <- runDB $ insert $ WordSubmission text transcription Nothing userId pendingStatus now now Nothing Nothing Nothing
+    submission <- runDB $ get404 submissionId
+    creatorMap <- loadUserMap [userId]
     returnJson $ object
-        [ "word" .= wordValue (Entity wordId word)
-        , "message" .= ("Word added." :: Text)
+        [ "submission" .= wordSubmissionValue (Just userId) creatorMap Map.empty [] (Entity submissionId submission)
+        , "message" .= ("Word submitted for review." :: Text)
         ]
 
 getApiWordR :: WordId -> Handler Value
@@ -180,6 +201,27 @@ postApiWordBookmarkR wordId = do
     returnJson $ object
         [ "active" .= active
         , "count" .= bookmarkCount
+        ]
+
+postApiWordSubmissionVoteR :: WordSubmissionId -> Handler Value
+postApiWordSubmissionVoteR submissionId = do
+    (userId, _user) <- requireApiAuthPair
+    submission <- runDB $ get404 submissionId
+    when (wordSubmissionStatus submission /= pendingStatus) $
+        apiError status400 "Voting is closed for this submission."
+    existingVote <- runDB $ getBy $ UniqueWordSubmissionVote userId submissionId
+    active <- case existingVote of
+        Just (Entity voteId _) -> do
+            runDB $ delete voteId
+            pure False
+        Nothing -> do
+            now <- liftIO getCurrentTime
+            _ <- runDB $ insert $ WordSubmissionVote userId submissionId now
+            pure True
+    voteCount <- runDB $ count [WordSubmissionVoteSubmission ==. submissionId]
+    returnJson $ object
+        [ "active" .= active
+        , "count" .= voteCount
         ]
 
 postApiCommentDeleteR :: WordCommentId -> Handler Value
@@ -309,9 +351,18 @@ getApiMeR = do
     likeCount <- runDB $ count [WordLikeUser ==. userId]
     followerCount <- runDB $ count [FollowingFollowee ==. userId]
     followingCount <- runDB $ count [FollowingFollower ==. userId]
-    myWords <- runDB $ selectList [WordCreator ==. Just userId] [Desc WordId, LimitTo 20]
+    mySubmissions <- runDB $ selectList [WordSubmissionCreator ==. userId] [Desc WordSubmissionSubmittedAt, LimitTo 20]
+    let promotedWordIds = mapMaybe (wordSubmissionPromotedWord . entityVal) mySubmissions
+    promotedWordMap <- loadWordMap promotedWordIds
+    let promotedWords =
+            mapMaybe
+                (\wordId -> Entity wordId <$> Map.lookup wordId promotedWordMap)
+                promotedWordIds
+    submissionVoteCountMap <- loadSubmissionVoteCounts mySubmissions
+    votedSubmissionIds <- loadViewerSubmissionVotes (Just userId) (map entityKey mySubmissions)
     bookmarks <- runDB $ selectList [WordBookmarkUser ==. userId] [Desc WordBookmarkCreatedAt, LimitTo 6]
     bookmarkWordMap <- loadWordMap $ map (wordBookmarkWord . entityVal) bookmarks
+    creatorMap <- loadUserMap [userId]
     returnJson $ object
         [ "user" .= userValue user
         , "meta" .= object
@@ -321,7 +372,8 @@ getApiMeR = do
             , "followerCount" .= followerCount
             , "followingCount" .= followingCount
             ]
-        , "myWords" .= map wordValue myWords
+        , "myWords" .= map wordValue promotedWords
+        , "mySubmissions" .= map (wordSubmissionValue (Just userId) creatorMap submissionVoteCountMap votedSubmissionIds) mySubmissions
         , "bookmarks" .=
             mapMaybe
                 (\bookmark ->
@@ -373,3 +425,34 @@ matchesQuery queryText word =
         loweredText = T.toLower $ wordText word
         loweredTranscription = maybe "" T.toLower (wordTranscription word)
     in loweredQuery `T.isInfixOf` loweredText || loweredQuery `T.isInfixOf` loweredTranscription
+
+matchesSubmissionQuery :: Text -> WordSubmission -> Bool
+matchesSubmissionQuery queryText submission =
+    let loweredQuery = T.toLower queryText
+        loweredText = T.toLower $ wordSubmissionText submission
+        loweredTranscription = maybe "" T.toLower (wordSubmissionTranscription submission)
+    in loweredQuery `T.isInfixOf` loweredText || loweredQuery `T.isInfixOf` loweredTranscription
+
+loadSubmissionVoteCounts :: [Entity WordSubmission] -> Handler (Map.Map WordSubmissionId Int)
+loadSubmissionVoteCounts submissions
+    | null submissionIds = pure Map.empty
+    | otherwise = do
+        counts <- forM submissionIds $ \submissionId -> do
+            voteCount <- runDB $ count [WordSubmissionVoteSubmission ==. submissionId]
+            pure (submissionId, voteCount)
+        pure $ Map.fromList counts
+  where
+    submissionIds = map entityKey submissions
+
+loadViewerSubmissionVotes :: Maybe UserId -> [WordSubmissionId] -> Handler [WordSubmissionId]
+loadViewerSubmissionVotes Nothing _ = pure []
+loadViewerSubmissionVotes (Just _) [] = pure []
+loadViewerSubmissionVotes (Just viewerId) submissionIds = do
+    votes <- runDB $ selectList [WordSubmissionVoteUser ==. viewerId, WordSubmissionVoteSubmission <-. submissionIds] []
+    pure $ map (wordSubmissionVoteSubmission . entityVal) votes
+
+pendingStatus :: Text
+pendingStatus = "pending"
+
+approvedStatus :: Text
+approvedStatus = "approved"

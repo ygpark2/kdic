@@ -12,7 +12,7 @@ const config = {
       strict: false
     }),
     paths: {
-      base: '/app'
+      base: ''
     }
   }
 };

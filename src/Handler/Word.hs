@@ -7,7 +7,7 @@ import qualified Data.Text as T
 
 getWordR :: WordId -> Handler Html
 getWordR wordId =
-    redirect $ FrontendAppPathR ["words", toPathPiece wordId]
+    redirect $ FrontendWordDetailR wordId
 
 postWordCommentR :: WordId -> Handler Html
 postWordCommentR wordId = do

@@ -4,10 +4,13 @@ This directory is the incremental SvelteKit frontend for KDIC.
 
 ## Build Into Yesod Static
 
-The frontend is built into `../static/app` and is served by Yesod at:
+The frontend is built into `../static/app` and is served by Yesod at root-level app routes:
 
-- `/app`
-- `/app/*`
+- `/`
+- `/search`
+- `/words/*`
+- `/notifications`
+- `/profile`
 
 After changing frontend code:
 

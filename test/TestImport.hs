@@ -84,6 +84,8 @@ orderedTableNames tables =
     let preferredOrder =
             [ "notification"
             , "following"
+            , "word_submission_vote"
+            , "word_submission"
             , "word_bookmark"
             , "word_like"
             , "word_comment"

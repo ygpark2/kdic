@@ -13,10 +13,30 @@ export type ApiSession = {
 
 export type ApiWordSummary = {
   id: number;
+  kind?: 'word';
+  status?: 'official';
   text: string;
   transcription?: string | null;
   pronunciationUrl?: string | null;
 };
+
+export type ApiWordSubmissionSummary = {
+  id: number;
+  kind: 'submission';
+  text: string;
+  transcription?: string | null;
+  pronunciationUrl?: string | null;
+  status: 'pending' | 'approved' | 'rejected' | string;
+  submittedAt: string;
+  updatedAt: string;
+  approvedAt?: string | null;
+  promotedWordId?: number | null;
+  voteCount: number;
+  voted: boolean;
+  creator?: ApiUser | null;
+};
+
+export type ApiSearchResult = ApiWordSummary | ApiWordSubmissionSummary;
 
 export type ApiComment = {
   id: number;
@@ -46,11 +66,13 @@ export type HomeResponse = {
 };
 
 export type SearchResponse = {
-  items: ApiWordSummary[];
+  items: ApiSearchResult[];
   featuredWords: ApiWordSummary[];
   meta: {
     query?: string | null;
     total: number;
+    officialTotal?: number;
+    submissionTotal?: number;
   };
 };
 
@@ -118,6 +140,7 @@ export type ApiMe = {
     followingCount: number;
   };
   myWords: ApiWordSummary[];
+  mySubmissions: ApiWordSubmissionSummary[];
   bookmarks: ApiWordSummary[];
 };
 

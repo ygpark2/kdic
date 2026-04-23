@@ -22,7 +22,7 @@
       <ExploreNav />
       <section class="rail-card rail-stack">
         <p class="rail-label">Search guide</p>
-        <p class="rail-copy">Search matches both the word itself and its transcription.</p>
+        <p class="rail-copy">Search matches official words and pending community submissions by text or transcription.</p>
       </section>
     </div>
   </svelte:fragment>
@@ -35,6 +35,9 @@
           <h2 class="subsection-title">
             {#if data.q}
               {data.meta.total} matches for "{data.q}"
+              {#if data.meta.submissionTotal}
+                <span class="chip">{data.meta.submissionTotal} submissions</span>
+              {/if}
             {:else}
               Start with a word
             {/if}

@@ -12,6 +12,7 @@ module Handler.Api.Shared
     , notificationValue
     , requireApiAuthPair
     , userValue
+    , wordSubmissionValue
     , wordValue
     ) where
 
@@ -58,9 +59,29 @@ wordValue :: Entity Word -> Value
 wordValue (Entity wordId word) =
     object
         [ "id" .= fromSqlKey wordId
+        , "kind" .= ("word" :: Text)
+        , "status" .= ("official" :: Text)
         , "text" .= wordText word
         , "transcription" .= wordTranscription word
         , "pronunciationUrl" .= wordPronunciationUrl word
+        ]
+
+wordSubmissionValue :: Maybe UserId -> Map.Map UserId User -> Map.Map WordSubmissionId Int -> [WordSubmissionId] -> Entity WordSubmission -> Value
+wordSubmissionValue mViewerId creatorMap voteCountMap votedIds (Entity submissionId submission) =
+    object
+        [ "id" .= fromSqlKey submissionId
+        , "kind" .= ("submission" :: Text)
+        , "text" .= wordSubmissionText submission
+        , "transcription" .= wordSubmissionTranscription submission
+        , "pronunciationUrl" .= wordSubmissionPronunciationUrl submission
+        , "status" .= wordSubmissionStatus submission
+        , "submittedAt" .= isoTime (wordSubmissionSubmittedAt submission)
+        , "updatedAt" .= isoTime (wordSubmissionUpdatedAt submission)
+        , "approvedAt" .= fmap isoTime (wordSubmissionApprovedAt submission)
+        , "promotedWordId" .= fmap fromSqlKey (wordSubmissionPromotedWord submission)
+        , "voteCount" .= fromMaybe 0 (Map.lookup submissionId voteCountMap)
+        , "voted" .= maybe False (\_ -> submissionId `elem` votedIds) mViewerId
+        , "creator" .= maybe Null userValue (Map.lookup (wordSubmissionCreator submission) creatorMap)
         ]
 
 meaningValue :: Entity Meaning -> [Entity Example] -> Value
