@@ -226,12 +226,12 @@
   />
   {#if data.seo?.imageUrl}
     <meta property="og:image" content={data.seo.imageUrl} />
-    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:type" content="image/svg+xml" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={data.seo?.title || `${data.item.word.text} | KDIC`} />
   {/if}
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content={data.seo?.title || `${data.item.word.text} | KDIC`} />
   <meta
     name="twitter:description"

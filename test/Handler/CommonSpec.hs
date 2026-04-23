@@ -27,7 +27,7 @@ spec = withApp $ do
         statusIs 200
         bodyContains "og:image"
         bodyContains "/og/word/"
-        bodyContains "/card.png"
+        bodyContains "/card.svg"
 
     yit "serves a generated SVG OG image for a word" $ do
         wordId <- runDB $ insert $ M.Word (pack "CardWord") (Just $ pack "card-word") Nothing
@@ -36,7 +36,7 @@ spec = withApp $ do
         bodyContains "<svg"
         bodyContains "CardWord"
 
-    yit "serves a generated PNG OG image for a word" $ do
+    yit "redirects legacy PNG OG image requests to the SVG card" $ do
         wordId <- runDB $ insert $ M.Word (pack "PngWord") (Just $ pack "png-word") Nothing
         get (WordOgPngR wordId)
-        statusIs 200
+        statusIs 303

@@ -336,4 +336,53 @@ spec = withApp $ do
             addPostParam "embedHtml" "<script src=\"https://evil.example/embed.js\"></script>"
             addPostParam "sortOrder" "0"
         statusIs 400
-        bodyContains "Google Ads snippets"
+        bodyContains "supported Google Ads"
+
+    yit "allows deleting an admin account after it has written audit logs" $ do
+        request $ do
+            setMethod "POST"
+            setUrl ApiAuthRegisterR
+            addPostParam "ident" "admin-audit-owner"
+            addPostParam "password" "pass1234"
+            addPostParam "passwordConfirm" "pass1234"
+        statusIs 200
+
+        adminOwnerId <- runDB $ do
+            mUser <- getBy $ M.UniqueUser "admin-audit-owner"
+            case mUser of
+                Just (Entity userId _) -> do
+                    update userId [M.UserRole =. "admin"]
+                    pure userId
+                Nothing -> error "Expected admin-audit-owner user"
+
+        request $ do
+            setMethod "POST"
+            setUrl ApiAdminWordsR
+            addPostParam "text" "AuditDeleteWord"
+        statusIs 200
+
+        request $ do
+            setMethod "POST"
+            setUrl ApiAuthLogoutR
+        statusIs 200
+
+        request $ do
+            setMethod "POST"
+            setUrl ApiAuthRegisterR
+            addPostParam "ident" "admin-audit-viewer"
+            addPostParam "password" "pass1234"
+            addPostParam "passwordConfirm" "pass1234"
+        statusIs 200
+
+        runDB $ do
+            mUser <- getBy $ M.UniqueUser "admin-audit-viewer"
+            case mUser of
+                Just (Entity userId _) -> update userId [M.UserRole =. "admin"]
+                Nothing -> error "Expected admin-audit-viewer user"
+
+        request $ do
+            setMethod "POST"
+            setUrl (ApiAdminUserR adminOwnerId)
+            addPostParam "action" "delete"
+        statusIs 200
+        bodyContains "\"message\":\"User deleted.\""

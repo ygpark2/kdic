@@ -9,12 +9,9 @@ import Data.Char (isSpace)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.FileEmbed (embedFile)
-import System.Directory (doesFileExist, getTemporaryDirectory, removeFile)
-import System.Exit (ExitCode(..))
-import System.IO (openBinaryTempFile, openTempFile)
+import System.Directory (doesFileExist)
 import System.FilePath (takeExtension)
 import qualified System.FilePath as FP
-import System.Process (readProcessWithExitCode)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Aeson as Aeson
@@ -86,18 +83,7 @@ getWordOgImageR wordId = do
 
 getWordOgPngR :: WordId -> Handler TypedContent
 getWordOgPngR wordId = do
-    word <- runDB $ get404 wordId
-    mMeaning <- runDB $ selectFirst [MeaningWord ==. wordId] [Asc MeaningId]
-    app <- getYesod
-    let svgDocument = wordOgSvg word (entityVal <$> mMeaning)
-    mPngBytes <- liftIO $ renderOgPng app svgDocument
-    case mPngBytes of
-        Just pngBytes -> do
-            addHeader "Cache-Control" ("public, max-age=3600" :: Text)
-            addHeader "X-Content-Type-Options" ("nosniff" :: Text)
-            return $ TypedContent "image/png" $ toContent pngBytes
-        Nothing ->
-            redirect (WordOgImageR wordId)
+    redirect (WordOgImageR wordId)
 
 getFrontendAssetR :: [Text] -> Handler TypedContent
 getFrontendAssetR pieces =
@@ -119,7 +105,7 @@ getFrontendWordDetailR wordId = do
     htmlTemplate <- loadFrontendHtml app ["words", toPathPiece wordId]
     applySecurityHeaders
     let pageUrl = canonicalRootUrl app <> "/words/" <> toPathPiece wordId
-        imageUrl = canonicalRootUrl app <> ogImagePngPath wordId
+        imageUrl = canonicalRootUrl app <> ogImageSvgPath wordId
         titleText = wordMetaTitle word
         descriptionText = wordMetaDescription word (entityVal <$> mMeaning)
         document = injectHeadMetadata pageUrl imageUrl titleText descriptionText (wordStructuredData pageUrl word (entityVal <$> mMeaning)) htmlTemplate
@@ -186,10 +172,6 @@ ogImageSvgPath :: WordId -> Text
 ogImageSvgPath wordId =
     "/og/word/" <> toPathPiece wordId <> "/card.svg"
 
-ogImagePngPath :: WordId -> Text
-ogImagePngPath wordId =
-    "/og/word/" <> toPathPiece wordId <> "/card.png"
-
 sitemapUrlEntry :: Text -> Text
 sitemapUrlEntry url =
     "<url><loc>" <> htmlEscape url <> "</loc></url>"
@@ -206,11 +188,11 @@ injectHeadMetadata pageUrl imageUrl titleText descriptionText structuredData doc
                 , "\n<meta property=\"og:description\" content=\"", htmlEscape descriptionText, "\">"
                 , "\n<meta property=\"og:url\" content=\"", htmlEscape pageUrl, "\">"
                 , "\n<meta property=\"og:image\" content=\"", htmlEscape imageUrl, "\">"
-                , "\n<meta property=\"og:image:type\" content=\"image/png\">"
+                , "\n<meta property=\"og:image:type\" content=\"image/svg+xml\">"
                 , "\n<meta property=\"og:image:width\" content=\"1200\">"
                 , "\n<meta property=\"og:image:height\" content=\"630\">"
                 , "\n<meta property=\"og:image:alt\" content=\"", htmlEscape titleText, "\">"
-                , "\n<meta name=\"twitter:card\" content=\"summary_large_image\">"
+                , "\n<meta name=\"twitter:card\" content=\"summary\">"
                 , "\n<meta name=\"twitter:title\" content=\"", htmlEscape titleText, "\">"
                 , "\n<meta name=\"twitter:description\" content=\"", htmlEscape descriptionText, "\">"
                 , "\n<meta name=\"twitter:image\" content=\"", htmlEscape imageUrl, "\">"
@@ -345,44 +327,6 @@ consumeWords maxChars acc (nextWord : remainingWords)
 normalizeOgWhitespace :: Text -> Text
 normalizeOgWhitespace =
     T.unwords . T.words . T.map (\char -> if isSpace char then ' ' else char)
-
-renderOgPng :: App -> Text -> IO (Maybe ByteString)
-renderOgPng app svgDocument = do
-    let scriptPath = frontendRenderScriptPath app
-    scriptExists <- doesFileExist scriptPath
-    if not scriptExists
-        then pure Nothing
-        else do
-            tmpDir <- getTemporaryDirectory
-            (svgPath, svgHandle) <- openTempFile tmpDir "kdic-og-card.svg"
-            (pngPath, pngHandle) <- openBinaryTempFile tmpDir "kdic-og-card.png"
-            BS.hPutStr svgHandle (TE.encodeUtf8 svgDocument)
-            hClose svgHandle
-            hClose pngHandle
-            let cleanup = do
-                    removeFileIfExists svgPath
-                    removeFileIfExists pngPath
-            result <-
-                finally
-                    (do
-                        (exitCode, _stdoutText, _stderrText) <- readProcessWithExitCode "node" [scriptPath, svgPath, pngPath] ""
-                        case exitCode of
-                            ExitSuccess -> Just <$> BS.readFile pngPath
-                            ExitFailure _ -> pure Nothing
-                    )
-                    cleanup
-            pure result
-
-frontendRenderScriptPath :: App -> FilePath
-frontendRenderScriptPath app =
-    let projectRoot = FP.takeDirectory $ appStaticDir $ appSettings app
-    in projectRoot FP.</> "frontend" FP.</> "scripts" FP.</> "render-og-png.mjs"
-
-removeFileIfExists :: FilePath -> IO ()
-removeFileIfExists filePath = do
-    fileExists <- doesFileExist filePath
-    when fileExists $
-        removeFile filePath
 
 htmlEscape :: Text -> Text
 htmlEscape =

@@ -5,6 +5,7 @@ module Handler.Api.Admin where
 
 import Import
 import Database.Persist.Sql (fromSqlKey)
+import Data.Char (isAlphaNum, isSpace)
 import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, localTimeToUTC, utcToLocalTime)
 import Handler.Api.Shared (apiError, cleanOptionalText, isoTime, userValue)
 import Yesod.Auth.HashDB (setPassword)
@@ -54,7 +55,7 @@ getApiAdminOpsR :: Handler Value
 getApiAdminOpsR = do
     _ <- requireAdminApi
     logs <- runDB $ selectList [] [Desc AdminActionLogCreatedAt, LimitTo 40]
-    adminMap <- loadAdminUserMap $ map (adminActionLogAdmin . entityVal) logs
+    adminMap <- loadAdminUserMap $ mapMaybe (adminActionLogAdmin . entityVal) logs
     returnJson $
         object
             [ "healthUrl" .= ("/healthz" :: Text)
@@ -327,6 +328,7 @@ postApiAdminUserR userId = do
             unless (null userSubmissionIds) $
                 runDB $ deleteWhere [WordSubmissionVoteSubmission <-. userSubmissionIds]
             runDB $ updateWhere [WordSubmissionApprovedBy ==. Just userId] [WordSubmissionApprovedBy =. Nothing]
+            runDB $ updateWhere [AdminActionLogAdmin ==. Just userId] [AdminActionLogAdmin =. Nothing]
             runDB $ deleteWhere [UploadOwnerId ==. userId]
             runDB $ deleteWhere [EmailUser ==. Just userId]
             runDB $ deleteWhere [WordSubmissionCreator ==. userId]
@@ -558,8 +560,24 @@ adminActionLogValue adminMap (Entity logId actionLog) =
         , "summary" .= adminActionLogSummary actionLog
         , "details" .= adminActionLogDetails actionLog
         , "createdAt" .= isoTime (adminActionLogCreatedAt actionLog)
-        , "admin" .= maybe Null userValue (Map.lookup (adminActionLogAdmin actionLog) adminMap)
+        , "admin" .= adminActorValue adminMap actionLog
         ]
+
+adminActorValue :: Map.Map UserId User -> AdminActionLog -> Value
+adminActorValue adminMap actionLog =
+    case adminActionLogAdmin actionLog >>= (`Map.lookup` adminMap) of
+        Just adminUser ->
+            userValue adminUser
+        Nothing ->
+            object
+                [ "ident" .= adminActionLogAdminIdent actionLog
+                , "displayName" .= fromMaybe (adminActionLogAdminIdent actionLog) (adminActionLogAdminDisplayName actionLog)
+                , "description" .= (Nothing :: Maybe Text)
+                , "role" .= ("admin" :: Text)
+                , "isAdmin" .= True
+                , "isPremium" .= False
+                , "premiumBadge" .= (Nothing :: Maybe Text)
+                ]
 
 loadAdminUserMap :: [UserId] -> Handler (Map.Map UserId User)
 loadAdminUserMap userIds
@@ -696,41 +714,53 @@ validateEmbedHtml kindValue embedHtmlValue
                 , "<form"
                 , "<base"
                 , "<meta"
+                , "<iframe"
+                , "<img"
+                , "<link"
+                , "<style"
+                , "<video"
+                , "<audio"
                 , "javascript:"
                 , "data:text/html"
                 , "srcdoc="
                 ]
-            blockedInlineHandlers =
-                [ "onload="
-                , "onclick="
-                , "onerror="
-                , "onmouseover="
-                , "onfocus="
-                , "onmouseenter="
-                ]
         when (any (`T.isInfixOf` lowered) blockedFragments) $
             apiError status400 "Embed HTML contains blocked elements or protocols."
-        when (any (`T.isInfixOf` lowered) blockedInlineHandlers) $
+        when (containsInlineEventHandler lowered) $
             apiError status400 "Inline event handlers are not allowed in embed HTML."
-        when (T.isInfixOf "<script" lowered && not (isAllowedGoogleEmbed lowered)) $
-            apiError status400 "Embed scripts are limited to Google Ads snippets."
-        when (T.isInfixOf "<iframe" lowered && not (allSrcAttributesUseHttps lowered)) $
-            apiError status400 "Embed iframe sources must use https URLs."
+        when (not (all (`elem` ["script", "ins"]) (extractTagNames lowered))) $
+            apiError status400 "Embed HTML only supports Google Ads script and ins tags."
+        when (not (isAllowedGoogleEmbed lowered)) $
+            apiError status400 "Embed HTML must match the supported Google Ads snippet pattern."
+        when (not (allAllowedEmbedSources lowered)) $
+            apiError status400 "Embed script sources must use the supported Google Ads domains."
+        when (any isDisallowedInlineScript (extractScriptBodies lowered)) $
+            apiError status400 "Inline embed scripts must use the standard adsbygoogle push call."
         pure (Just value)
 
 isAllowedGoogleEmbed :: Text -> Bool
 isAllowedGoogleEmbed lowered =
-    ("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" `T.isInfixOf` lowered
-        || "partner.googleadservices.com" `T.isInfixOf` lowered)
+    "<ins" `T.isInfixOf` lowered
         && "adsbygoogle" `T.isInfixOf` lowered
+        && ("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" `T.isInfixOf` lowered
+            || "partner.googleadservices.com" `T.isInfixOf` lowered
+            || "www.googletagservices.com" `T.isInfixOf` lowered)
 
-allSrcAttributesUseHttps :: Text -> Bool
-allSrcAttributesUseHttps html =
-    all srcIsSafe (extractAttributeValues "src=" html)
+allAllowedEmbedSources :: Text -> Bool
+allAllowedEmbedSources html =
+    all srcIsAllowedForEmbed (extractAttributeValues "src=" html)
 
-srcIsSafe :: Text -> Bool
-srcIsSafe srcValue =
-    "https://" `T.isPrefixOf` srcValue || "//" `T.isPrefixOf` srcValue
+srcIsAllowedForEmbed :: Text -> Bool
+srcIsAllowedForEmbed rawSrcValue =
+    any (`T.isPrefixOf` normalizedSrcValue)
+        [ "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
+        , "https://partner.googleadservices.com/"
+        , "https://www.googletagservices.com/"
+        ]
+  where
+    normalizedSrcValue
+        | "//" `T.isPrefixOf` rawSrcValue = "https:" <> rawSrcValue
+        | otherwise = rawSrcValue
 
 extractAttributeValues :: Text -> Text -> [Text]
 extractAttributeValues needle haystack =
@@ -746,6 +776,79 @@ extractAttributeValues needle haystack =
                             _ -> T.takeWhile (\char -> char /= ' ' && char /= '>') raw
                     remainder = T.drop (T.length value) raw
                 in value : extractAttributeValues needle remainder
+
+extractTagNames :: Text -> [Text]
+extractTagNames html =
+    case T.breakOn "<" html of
+        (_before, matched)
+            | T.null matched -> []
+            | otherwise ->
+                let afterOpen = T.drop 1 matched
+                    afterSlash = fromMaybe afterOpen (T.stripPrefix "/" afterOpen)
+                    tagName = T.takeWhile isTagNameChar afterSlash
+                    rest = T.dropWhile (/= '>') afterOpen
+                    nextHtml = if T.null rest then "" else T.drop 1 rest
+                in case tagName of
+                    "" -> extractTagNames nextHtml
+                    "!--" -> extractTagNames nextHtml
+                    _ -> tagName : extractTagNames nextHtml
+
+isTagNameChar :: Char -> Bool
+isTagNameChar char = isAlphaNum char || char `elem` ("-:" :: String)
+
+containsInlineEventHandler :: Text -> Bool
+containsInlineEventHandler html =
+    any isEventAttributeName (extractAttributeNames html)
+
+extractAttributeNames :: Text -> [Text]
+extractAttributeNames html =
+    mapMaybe attributeNameFromRaw (extractRawAttributes html)
+
+extractRawAttributes :: Text -> [Text]
+extractRawAttributes html =
+    case T.breakOn "<" html of
+        (_before, matched)
+            | T.null matched -> []
+            | otherwise ->
+                let tagContent = T.takeWhile (/= '>') $ T.drop 1 matched
+                    nextHtml =
+                        let rest = T.dropWhile (/= '>') matched
+                        in if T.null rest then "" else T.drop 1 rest
+                    attributes =
+                        case T.words tagContent of
+                            [] -> []
+                            (_tagName : rawAttributes) -> rawAttributes
+                in attributes <> extractRawAttributes nextHtml
+
+attributeNameFromRaw :: Text -> Maybe Text
+attributeNameFromRaw rawAttribute =
+    cleanOptionalText $
+        Just $
+            T.takeWhile (\char -> char /= '=' && not (isSpace char)) rawAttribute
+
+isEventAttributeName :: Text -> Bool
+isEventAttributeName attributeName =
+    "on" `T.isPrefixOf` T.toLower attributeName
+
+extractScriptBodies :: Text -> [Text]
+extractScriptBodies html =
+    case T.breakOn "<script" html of
+        (_before, matched)
+            | T.null matched -> []
+            | otherwise ->
+                let afterOpen = snd $ T.breakOn ">" matched
+                    scriptContentWithClose = T.drop 1 afterOpen
+                    (scriptBody, afterClose) = T.breakOn "</script>" scriptContentWithClose
+                    remainder =
+                        if T.null afterClose
+                            then ""
+                            else T.drop (T.length ("</script>" :: Text)) afterClose
+                in scriptBody : extractScriptBodies remainder
+
+isDisallowedInlineScript :: Text -> Bool
+isDisallowedInlineScript scriptBody =
+    let compactBody = T.toLower $ T.filter (not . isSpace) scriptBody
+    in compactBody /= "" && not ("adsbygoogle" `T.isInfixOf` compactBody && ".push(" `T.isInfixOf` compactBody)
 
 validateUrlField :: Text -> Maybe Text -> Handler ()
 validateUrlField _ Nothing = pure ()
@@ -813,7 +916,8 @@ rejectedStatus = "rejected"
 recordAdminAction :: UserId -> Text -> Text -> Maybe Text -> Text -> Maybe Text -> Handler ()
 recordAdminAction adminId actionName targetType targetId summary details = do
     now <- liftIO getCurrentTime
-    _ <- runDB $ insert $ AdminActionLog adminId actionName targetType targetId summary details now
+    adminUser <- runDB $ get404 adminId
+    _ <- runDB $ insert $ AdminActionLog (Just adminId) (userIdent adminUser) (userName adminUser) actionName targetType targetId summary details now
     pure ()
 
 deployChecklistItems :: [Text]

@@ -88,7 +88,9 @@ Ad
     deriving Typeable
 
 AdminActionLog
-    admin UserId
+    admin UserId Maybe
+    adminIdent Text
+    adminDisplayName Text Maybe
     action Text
     targetType Text
     targetId Text Maybe
