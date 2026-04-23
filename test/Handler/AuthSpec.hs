@@ -15,3 +15,7 @@ spec = withApp $ do
     yit "protects the admin setting creation screen" $ do
         get AdminSettingNewR
         statusIs 303
+
+    yit "protects the admin ad creation screen" $ do
+        get AdminAdNewR
+        statusIs 303

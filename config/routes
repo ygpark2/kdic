@@ -3,6 +3,10 @@
 
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
+/sitemap.xml SitemapR GET
+/healthz HealthzR GET
+/og/word/#WordId/card.svg WordOgImageR GET
+/og/word/#WordId/card.png WordOgPngR GET
 
 / HomeR GET
 /_app/*Texts FrontendAssetR GET
@@ -12,12 +16,34 @@
 
 /api/home ApiHomeR GET
 /api/search ApiSearchR GET
+/api/ads/#AdId/impression ApiAdImpressionR POST
+/api/admin/dashboard ApiAdminDashboardR GET
+/api/admin/ops ApiAdminOpsR GET
+/api/admin/words ApiAdminWordsR GET POST
+/api/admin/words/#WordId ApiAdminWordR GET POST
+/api/admin/submissions ApiAdminSubmissionsR GET
+/api/admin/submissions/#WordSubmissionId/approve ApiAdminSubmissionApproveR POST
+/api/admin/submissions/#WordSubmissionId/reject ApiAdminSubmissionRejectR POST
+/api/admin/ads ApiAdminAdsR GET POST
+/api/admin/ads/#AdId ApiAdminAdR GET POST
+/api/admin/users ApiAdminUsersR GET POST
+/api/admin/users/#UserId ApiAdminUserR GET POST
+/api/admin/settings ApiAdminSettingsR GET POST
+/api/admin/settings/#SiteSettingId ApiAdminSettingR GET POST
 /api/words ApiWordsR POST
 /api/word/#WordId ApiWordR GET
 /api/word/#WordId/comment ApiWordCommentR POST
 /api/word/#WordId/like ApiWordLikeR POST
 /api/word/#WordId/bookmark ApiWordBookmarkR POST
+/api/collections ApiCollectionsR POST
+/api/collections/#WordCollectionId/delete ApiCollectionDeleteR POST
+/api/collections/#WordCollectionId/add/#WordId ApiCollectionAddWordR POST
+/api/collections/#WordCollectionId/remove/#WordId ApiCollectionRemoveWordR POST
 /api/submissions/#WordSubmissionId/vote ApiWordSubmissionVoteR POST
+/api/premium/recommendations ApiPremiumRecommendationsR GET
+/api/premium/sentence ApiPremiumSentenceR POST
+/api/premium/nickname ApiPremiumNicknameR POST
+/api/premium/wordbook ApiPremiumWordbookR GET
 /api/comment/#WordCommentId/delete ApiCommentDeleteR POST
 /api/notifications ApiNotificationsR GET
 /api/notifications/read-all ApiNotificationsReadAllR POST
@@ -38,22 +64,25 @@
 /notifications NotificationsR GET
 /notifications/read-all NotificationsReadAllR POST
 
-/register RegisterR GET POST
-/profile ProfileR GET POST
+/register RegisterR GET
+/profile ProfileR GET
 /settings SettingsR GET
 /upload UploadR POST
 /files/#Text FileR GET
+/ads/#AdId/click AdClickR GET
 
 /admin AdminR GET
-/admin/words AdminWordsR GET POST
+/admin/ops AdminOpsR GET
+/admin/words AdminWordsR GET
 /admin/words/new AdminWordNewR GET
-/admin/words/edit/#WordId AdminWordEditR GET POST
+/admin/words/edit/#WordId AdminWordEditR GET
 /admin/submissions AdminSubmissionsR GET
-/admin/submissions/#WordSubmissionId/approve AdminSubmissionApproveR POST
-/admin/submissions/#WordSubmissionId/reject AdminSubmissionRejectR POST
-/admin/users AdminUsersR GET POST
+/admin/ads AdminAdsR GET
+/admin/ads/new AdminAdNewR GET
+/admin/ads/id/#AdId AdminAdR GET
+/admin/users AdminUsersR GET
 /admin/users/new AdminUserNewR GET
-/admin/users/id/#UserId AdminUserR GET POST
-/admin/settings AdminSettingsR GET POST
+/admin/users/id/#UserId AdminUserR GET
+/admin/settings AdminSettingsR GET
 /admin/settings/new AdminSettingNewR GET
-/admin/settings/id/#SiteSettingId AdminSettingR GET POST
+/admin/settings/id/#SiteSettingId AdminSettingR GET

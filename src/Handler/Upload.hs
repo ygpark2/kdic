@@ -3,7 +3,6 @@ module Handler.Upload (postUploadR, getFileR) where
 
 import Import
 import Storage (StorageBackendType(..), storagePut, storageOpen, storageUrl)
-import Data.Time (getCurrentTime)
 
 uploadForm :: Html -> MForm Handler (FormResult FileInfo, Widget)
 uploadForm = renderDivs $ fileAFormReq $ FieldSettings
@@ -45,7 +44,7 @@ getFileR key = do
             m <- storageOpen storage key
             case m of
                 Nothing -> notFound
-                Just (ct, path) -> sendFile ct path
+                Just (ct, filePath) -> sendFile ct filePath
         StorageBackendS3 -> do
             url <- storageUrl storage key
             redirect url

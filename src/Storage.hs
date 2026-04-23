@@ -8,7 +8,7 @@ module Storage
 import ClassyPrelude.Yesod
 import qualified Data.Text as T
 import System.Directory (createDirectoryIfMissing, doesFileExist, getTemporaryDirectory, removeFile)
-import System.FilePath ((</>), takeDirectory, takeExtension)
+import System.FilePath (takeDirectory, takeExtension)
 import Data.UUID.V4 (nextRandom)
 import Data.UUID (toText)
 import System.Environment (getEnvironment)
@@ -44,16 +44,16 @@ mkLocalStorage settings = do
     , storagePut = \fi prefix -> do
         key <- liftIO $ randomKeyWithExt fi
         let fullKey = prefix <> "/" <> key
-            path = root </> T.unpack fullKey
-        liftIO $ createDirectoryIfMissing True (takeDirectory path)
-        liftIO $ fileMove fi path
+            filePath = root </> T.unpack fullKey
+        liftIO $ createDirectoryIfMissing True (takeDirectory filePath)
+        liftIO $ fileMove fi filePath
         pure fullKey
     , storageOpen = \key -> do
-        let path = root </> T.unpack key
-        exists <- liftIO $ doesFileExist path
-        if not exists
+        let filePath = root </> T.unpack key
+        fileExists <- liftIO $ doesFileExist filePath
+        if not fileExists
           then pure Nothing
-          else pure $ Just ("application/octet-stream", path)
+          else pure $ Just ("application/octet-stream", filePath)
     , storageUrl = \key -> pure (base <> "/" <> key)
     }
 

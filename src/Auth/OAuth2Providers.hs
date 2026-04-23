@@ -11,21 +11,15 @@ import URI.ByteString (URI, parseURI, strictURIParserOptions)
 import Yesod.Auth (AuthPlugin, Creds (..), YesodAuth)
 import Yesod.Auth.OAuth2.Prelude (OAuth2 (..), authGetProfile, authOAuth2, setExtra)
 
-newtype KakaoProfile = KakaoProfile
-    { kakaoId :: Integer
-    }
+newtype KakaoProfile = KakaoProfile Integer
 
 instance FromJSON KakaoProfile where
     parseJSON = withObject "KakaoProfile" $ \o ->
         KakaoProfile <$> o .: "id"
 
-newtype NaverResponse = NaverResponse
-    { naverResponse :: NaverProfile
-    }
+newtype NaverResponse = NaverResponse NaverProfile
 
-newtype NaverProfile = NaverProfile
-    { naverId :: Text
-    }
+newtype NaverProfile = NaverProfile Text
 
 instance FromJSON NaverResponse where
     parseJSON = withObject "NaverResponse" $ \o ->

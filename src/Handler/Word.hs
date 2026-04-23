@@ -2,8 +2,6 @@
 module Handler.Word where
 
 import Import
-import Data.Time (getCurrentTime)
-import qualified Data.Text as T
 
 getWordR :: WordId -> Handler Html
 getWordR wordId =

@@ -19,6 +19,9 @@
   {#if session.authenticated && session.user}
     <p class="rail-label">Account</p>
     <h3 class="rail-title">{session.user.displayName}</h3>
+    {#if session.user.isPremium}
+      <span class="tag-chip">{session.user.premiumBadge || 'Premium'}</span>
+    {/if}
     <p class="rail-copy">{session.user.description || 'Share word stories, keep bookmarks, and follow new definitions.'}</p>
     <div class="button-stack">
       <a class:action-link={isProfileActive} class:ghost-link={!isProfileActive} href={profileHref}>Profile</a>

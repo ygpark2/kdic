@@ -52,6 +52,18 @@ stop:
 clean:
 	@rm ./data/*.sqlite*
 
+.PHONY: backup
+backup:
+	@./scripts/backup.sh
+
+.PHONY: restore
+restore:
+	@if [ -z "$(BACKUP_FILE)" ]; then \
+		echo "Usage: make restore BACKUP_FILE=/path/to/archive.tar.gz"; \
+		exit 1; \
+	fi
+	@./scripts/restore.sh "$(BACKUP_FILE)"
+
 .PHONY: restart
 restart:
 	$(MAKE) rebuild && $(MAKE) start

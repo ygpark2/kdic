@@ -12,8 +12,7 @@ import Foundation            as X
 import Model                 as X hiding (Example, Word)
 import qualified Prelude as P
 import Test.Hspec            as X hiding (Example)
-import Text.Shakespeare.Text (st)
-import Yesod.Default.Config2 (ignoreEnv, loadAppSettings)
+import Yesod.Default.Config2 (ignoreEnv, loadYamlSettings)
 import Yesod.Test            as X
 
 -- Wiping the database
@@ -33,7 +32,7 @@ withApp specs = yesodSpecWithSiteGenerator appGenerator specs
 
 appGenerator :: IO App
 appGenerator = do
-    settings <- loadAppSettings
+    settings <- loadYamlSettings
         ["config/test-settings.yml", "config/settings.yml"]
         []
         ignoreEnv
@@ -72,7 +71,10 @@ rawConnection :: Text -> IO Sqlite.Connection
 rawConnection t = Sqlite.open t
 
 disableForeignKeys :: Sqlite.Connection -> IO ()
-disableForeignKeys conn = Sqlite.prepare conn "PRAGMA foreign_keys = OFF;" >>= (\stmt -> void (Sqlite.step stmt))
+disableForeignKeys conn = do
+    stmt <- Sqlite.prepare conn "PRAGMA foreign_keys = OFF;"
+    void $ Sqlite.step stmt
+    Sqlite.finalize stmt
 
 getTables :: MonadIO m => ReaderT SqlBackend m [Text]
 getTables = do
@@ -83,12 +85,17 @@ orderedTableNames :: [Text] -> [Text]
 orderedTableNames tables =
     let preferredOrder =
             [ "notification"
+            , "admin_action_log"
             , "following"
+            , "ad"
             , "word_submission_vote"
             , "word_submission"
+            , "word_collection_item"
+            , "word_collection"
             , "word_bookmark"
             , "word_like"
             , "word_comment"
+            , "daily_word_entry"
             , "example"
             , "meaning"
             , "upload"

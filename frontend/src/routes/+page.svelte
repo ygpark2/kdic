@@ -1,5 +1,6 @@
 <script lang="ts">
   import AppShell from '$lib/components/AppShell.svelte';
+  import AdSlotCard from '$lib/components/AdSlotCard.svelte';
   import AuthPanel from '$lib/components/AuthPanel.svelte';
   import ExploreNav from '$lib/components/ExploreNav.svelte';
   import SearchForm from '$lib/components/SearchForm.svelte';
@@ -86,6 +87,10 @@
           {/if}
           <a class="action-link" href={`${base}/words/${data.dailyWord.id}`}>Open entry</a>
         </section>
+      {/if}
+
+      {#if data.ads.homeRightRail && !data.viewer?.isPremium}
+        <AdSlotCard ad={data.ads.homeRightRail} />
       {/if}
     </div>
   </svelte:fragment>

@@ -3,6 +3,7 @@
 
 module Handler.Api.Shared
     ( apiError
+    , adValue
     , cleanOptionalText
     , commentValue
     , isoTime
@@ -11,6 +12,7 @@ module Handler.Api.Shared
     , meaningValue
     , notificationValue
     , requireApiAuthPair
+    , wordCollectionValue
     , userValue
     , wordSubmissionValue
     , wordValue
@@ -18,8 +20,6 @@ module Handler.Api.Shared
 
 import Import
 import Database.Persist.Sql (fromSqlKey)
-import Data.Time.Format (defaultTimeLocale, formatTime)
-import Network.HTTP.Types.Status (Status, status401)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 
@@ -45,6 +45,25 @@ isoTime :: UTCTime -> Text
 isoTime =
     pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 
+adValue :: Entity Ad -> Value
+adValue (Entity adId ad) =
+    object
+        [ "id" .= fromSqlKey adId
+        , "slot" .= adSlot ad
+        , "kind" .= adKind ad
+        , "title" .= adTitle ad
+        , "body" .= adBody ad
+        , "link" .= adLink ad
+        , "ctaLabel" .= adCtaLabel ad
+        , "imageUrl" .= adImageUrl ad
+        , "embedHtml" .= adEmbedHtml ad
+        , "startAt" .= fmap isoTime (adStartAt ad)
+        , "endAt" .= fmap isoTime (adEndAt ad)
+        , "clickCount" .= adClickCount ad
+        , "lastClickedAt" .= fmap isoTime (adLastClickedAt ad)
+        , "clickUrl" .= ("/ads/" <> toPathPiece adId <> "/click" :: Text)
+        ]
+
 userValue :: User -> Value
 userValue user =
     object
@@ -53,6 +72,8 @@ userValue user =
         , "description" .= userDescription user
         , "role" .= userRole user
         , "isAdmin" .= (userRole user == ("admin" :: Text))
+        , "isPremium" .= userPremium user
+        , "premiumBadge" .= effectivePremiumBadge user
         ]
 
 wordValue :: Entity Word -> Value
@@ -80,8 +101,26 @@ wordSubmissionValue mViewerId creatorMap voteCountMap votedIds (Entity submissio
         , "approvedAt" .= fmap isoTime (wordSubmissionApprovedAt submission)
         , "promotedWordId" .= fmap fromSqlKey (wordSubmissionPromotedWord submission)
         , "voteCount" .= fromMaybe 0 (Map.lookup submissionId voteCountMap)
+        , "priorityScore" .= wordSubmissionPriorityScore submission
         , "voted" .= maybe False (\_ -> submissionId `elem` votedIds) mViewerId
         , "creator" .= maybe Null userValue (Map.lookup (wordSubmissionCreator submission) creatorMap)
+        ]
+
+wordCollectionValue :: Map.Map WordId Word -> (Entity WordCollection, [Entity WordCollectionItem]) -> Value
+wordCollectionValue wordMap (Entity collectionId collection, items) =
+    object
+        [ "id" .= fromSqlKey collectionId
+        , "title" .= wordCollectionTitle collection
+        , "description" .= wordCollectionDescription collection
+        , "itemCount" .= length items
+        , "updatedAt" .= isoTime (wordCollectionUpdatedAt collection)
+        , "recentWords" .=
+            mapMaybe
+                (\item ->
+                    (\word -> wordValue $ Entity (wordCollectionItemWord $ entityVal item) word)
+                        <$> Map.lookup (wordCollectionItemWord $ entityVal item) wordMap
+                )
+                (take 4 items)
         ]
 
 meaningValue :: Entity Meaning -> [Entity Example] -> Value
@@ -140,7 +179,12 @@ loadWordMap :: [WordId] -> Handler (Map.Map WordId Word)
 loadWordMap wordIds
     | null uniqueIds = pure Map.empty
     | otherwise = do
-        words <- runDB $ selectList [WordId <-. uniqueIds] []
-        pure $ Map.fromList $ map (\(Entity wordId word) -> (wordId, word)) words
+        wordEntities <- runDB $ selectList [WordId <-. uniqueIds] []
+        pure $ Map.fromList $ map (\(Entity wordId word) -> (wordId, word)) wordEntities
   where
     uniqueIds = ordNub wordIds
+
+effectivePremiumBadge :: User -> Maybe Text
+effectivePremiumBadge user
+    | userPremium user = Just $ fromMaybe "Premium" (userPremiumBadge user)
+    | otherwise = Nothing

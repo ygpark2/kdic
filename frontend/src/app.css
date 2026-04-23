@@ -218,7 +218,9 @@ button {
 .example-list,
 .feed-list,
 .notification-list,
-.comment-list {
+.comment-list,
+.premium-list,
+.premium-copy-list {
   display: grid;
   gap: var(--card-gap);
 }
@@ -360,6 +362,31 @@ button {
 
 .spotlight-card {
   background: linear-gradient(140deg, #ffffff 0%, #ffd7c7 100%);
+}
+
+.ad-slot-card {
+  overflow: hidden;
+}
+
+.ad-slot-embed,
+.ad-slot-embed-frame {
+  width: 100%;
+  min-height: 120px;
+  overflow: hidden;
+}
+
+.ad-slot-embed-frame {
+  display: block;
+  border: 0;
+  background: transparent;
+}
+
+.ad-slot-image {
+  width: 100%;
+  height: auto;
+  border: 4px solid var(--line);
+  box-shadow: 5px 5px 0 #000000;
+  background: #ffffff;
 }
 
 .nav-stack {
@@ -590,6 +617,39 @@ button {
   gap: 14px;
 }
 
+.premium-grid,
+.premium-form-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.premium-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.premium-tile,
+.premium-item {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 4px solid var(--line);
+  box-shadow: 5px 5px 0 #000000;
+  background: var(--paper-strong);
+}
+
+.premium-tile strong,
+.premium-item strong {
+  font-size: 1rem;
+}
+
+.premium-tile p,
+.premium-copy-list p,
+.premium-item p {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
 .field span {
   font-size: 0.88rem;
   font-weight: 700;
@@ -627,6 +687,55 @@ button {
   padding: 32px 24px;
 }
 
+.admin-layout {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-main {
+  min-width: 0;
+}
+
+.admin-stats-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.admin-stat-value {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  line-height: 1;
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.field-checkbox input {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-preview-frame {
+  width: 100%;
+  min-height: 320px;
+  border: 4px solid var(--line);
+  box-shadow: 6px 6px 0 #000000;
+  background: #ffffff;
+}
+
+.admin-checklist {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 @media (min-width: 1080px) {
   .columns-layout {
     display: grid;
@@ -641,6 +750,16 @@ button {
   }
 
   .sticky-stack {
+    position: sticky;
+    top: 108px;
+  }
+
+  .admin-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .admin-sidebar {
     position: sticky;
     top: 108px;
   }
@@ -675,6 +794,10 @@ button {
   }
 
   .stat-grid-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .premium-grid {
     grid-template-columns: 1fr;
   }
 }

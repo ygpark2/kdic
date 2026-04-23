@@ -21,6 +21,7 @@ import Database.Persist.Sqlite              (createSqlitePool, runSqlPool,
 import Import hiding ((.), (++))
 import qualified Prelude as P
 import Yesod.Auth.HashDB                    (setPassword)
+import Data.Time                            (addDays)
 import Language.Haskell.TH.Syntax           (qLocation)
 import Network.Wai.Handler.Warp             (Settings, defaultSettings,
                                              defaultShouldDisplayException,
@@ -50,6 +51,7 @@ import Handler.Register
 import Handler.Admin
 import Handler.Profile
 import Handler.Api
+import Handler.Api.Admin
 import Storage (mkStorage, storageBackendType)
 
 -- This line actually creates our YesodDispatch instance. It is the second half
@@ -86,9 +88,10 @@ makeFoundation appSettings = do
         logFunc = messageLoggerSource tempFoundation appLogger
 
     let rawDbPath = unpack $ sqlDatabase $ appDatabaseConf appSettings
+        dbPoolSize = sqlPoolSize $ appDatabaseConf appSettings
     absDbPath <- makeAbsolute rawDbPath
     let dbDir = takeDirectory absDbPath
-        dbConf = (appDatabaseConf appSettings) { sqlDatabase = pack absDbPath }
+        dbFile = pack absDbPath
     when (dbDir /= "." && dbDir /= "") $
         createDirectoryIfMissing True dbDir
     flip runLoggingT logFunc $
@@ -96,8 +99,8 @@ makeFoundation appSettings = do
 
     -- Create the database connection pool
     pool <- flip runLoggingT logFunc $ createSqlitePool
-        (sqlDatabase dbConf)
-        (sqlPoolSize dbConf)
+        dbFile
+        dbPoolSize
 
     -- Perform database migration using our application's logging settings.
     runLoggingT (runSqlPool (runMigrationUnsafe migrateAll >> seedDefaults) pool) logFunc
@@ -107,8 +110,9 @@ makeFoundation appSettings = do
 
 seedDefaults :: SqlPersistT (LoggingT IO) ()
 seedDefaults = do
-    adminId <- seedAdmin
+    _ <- seedAdmin
     seedInitialWords
+    seedDailyWordEntries
 
 seedAdmin :: SqlPersistT (LoggingT IO) UserId
 seedAdmin = do
@@ -117,13 +121,13 @@ seedAdmin = do
     case mUser of
         Just (Entity userId _) -> do
             liftIO $ putStrLn "Admin user exists, updating role."
-            update userId [UserRole =. "admin"]
+            update userId [UserRole =. "admin", UserPremium =. True]
             pure userId
         Nothing -> do
             liftIO $ putStrLn "Creating new admin user..."
             user <- liftIO $ do
                 putStrLn "Calling setPassword..."
-                u <- setPassword "1234" (User "ygpark2" Nothing "admin" Nothing Nothing)
+                u <- setPassword "1234" $ User "ygpark2" Nothing "admin" Nothing Nothing True (Just "Founder")
                 putStrLn "setPassword finished."
                 return u
             insert user
@@ -180,6 +184,20 @@ seedInitialWords = do
             wordId <- insert $ Word "SNS" (Just "ess-enn-ess") Nothing
             meaningId <- insert $ Meaning wordId (Just "noun") "Social Networking Service; an online platform which people use to build social networks or social relationships."
             void $ insert $ Example meaningId "This site is a dictionary-based SNS." (Just "이 사이트는 사전 기반의 SNS이다.")
+
+seedDailyWordEntries :: SqlPersistT (LoggingT IO) ()
+seedDailyWordEntries = do
+    wordEntries <- selectList [] [Asc WordText]
+    unless (null wordEntries) $ do
+        now <- liftIO getCurrentTime
+        let today = utctDay now
+            backfillOffsets = reverse [0 .. min 6 (length wordEntries - 1)]
+            pickWord offset = wordEntries P.!! (offset `mod` length wordEntries)
+        forM_ backfillOffsets $ \offset -> do
+            let dayValue = addDays (negate $ fromIntegral offset) today
+                Entity wordId word = pickWord offset
+                note = Just $ "A rotating daily spotlight for " <> wordText word <> "."
+            void $ insertBy $ DailyWordEntry dayValue wordId note
 
 
 -- | Convert our foundation to a WAI Application by calling @toWaiAppPlain@ and
@@ -257,8 +275,8 @@ appMain = do
 
 loadDotenv :: IO ()
 loadDotenv = do
-    exists <- doesFileExist ".env"
-    when exists $ do
+    dotenvExists <- doesFileExist ".env"
+    when dotenvExists $ do
         contents <- readFile ".env"
         forM_ (T.lines $ decodeUtf8 contents) $ \rawLine -> do
             let line = T.strip rawLine

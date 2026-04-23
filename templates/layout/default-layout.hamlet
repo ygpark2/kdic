@@ -1,7 +1,0 @@
-$maybe msg <- mmsg
-  <div id="alert-message" class="fixed top-6 right-4 z-[100] rounded-xl border border-orange-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 shadow-lg animate-bounce">
-    #{msg}
-
-<div class="min-h-screen">
-    <main>
-        ^{widget}

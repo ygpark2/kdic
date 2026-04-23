@@ -4,6 +4,8 @@ User
     role Text default='user'
     name Text Maybe
     description Text Maybe
+    premium Bool default=False
+    premiumBadge Text Maybe
     UniqueUser ident
     deriving Typeable
 Email
@@ -25,6 +27,7 @@ WordSubmission
     pronunciationUrl Text Maybe
     creator UserId
     status Text default='pending'
+    priorityScore Int default=0
     submittedAt UTCTime
     updatedAt UTCTime
     approvedAt UTCTime Maybe
@@ -35,8 +38,63 @@ WordSubmission
 WordSubmissionVote
     user UserId
     submission WordSubmissionId
+    weight Int default=1
     createdAt UTCTime
     UniqueWordSubmissionVote user submission
+    deriving Typeable
+
+WordCollection
+    user UserId
+    title Text
+    description Text Maybe
+    createdAt UTCTime
+    updatedAt UTCTime
+    UniqueWordCollection user title
+    deriving Typeable
+
+WordCollectionItem
+    collection WordCollectionId
+    word WordId
+    createdAt UTCTime
+    UniqueWordCollectionItem collection word
+    deriving Typeable
+
+DailyWordEntry
+    day Day
+    word WordId
+    note Text Maybe
+    UniqueDailyWordEntry day
+    deriving Typeable
+
+Ad
+    slot Text
+    kind Text default='custom'
+    title Text
+    body Text Maybe
+    link Text Maybe
+    ctaLabel Text Maybe
+    imageUrl Text Maybe
+    embedHtml Text Maybe
+    sortOrder Int default=0
+    isActive Bool default=True
+    startAt UTCTime Maybe
+    endAt UTCTime Maybe
+    impressionCount Int default=0
+    lastImpressionAt UTCTime Maybe
+    clickCount Int default=0
+    lastClickedAt UTCTime Maybe
+    createdAt UTCTime
+    updatedAt UTCTime
+    deriving Typeable
+
+AdminActionLog
+    admin UserId
+    action Text
+    targetType Text
+    targetId Text Maybe
+    summary Text
+    details Text Maybe
+    createdAt UTCTime
     deriving Typeable
 
 Meaning

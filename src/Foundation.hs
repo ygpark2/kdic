@@ -4,11 +4,8 @@ module Foundation where
 import Import.NoFoundation hiding ((.), (++))
 import qualified Prelude as P
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
-import qualified Data.Text as T
-import qualified Data.Set as Set
-import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
-import Yesod.Auth.HashDB     (HashDBUser(..), authHashDB)
+import Yesod.Auth.HashDB     (authHashDB)
 import Yesod.Auth.OAuth2.Google (oauth2Google)
 import Auth.OAuth2Providers  (oauth2Kakao, oauth2Naver)
 import Yesod.Default.Util   (addStaticContentExternal)
@@ -47,9 +44,6 @@ instance HasHttpManager App where
 -- type Widget = WidgetT App IO ()
 mkYesodData "App" $(parseRoutesFile "config/routes")
 
--- | A convenient synonym for creating forms.
-type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
-
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.
 instance Yesod App where
@@ -60,34 +54,40 @@ instance Yesod App where
     defaultLayout widget = do
         master <- getYesod
         mmsg <- getMessage
-        mSiteTitle <- runDB $ getBy $ UniqueSiteSetting "site_title"
-        mSiteSubtitle <- runDB $ getBy $ UniqueSiteSetting "site_subtitle"
-        let siteTitle = maybe "Dictionary SNS" (siteSettingValue P.. entityVal) mSiteTitle
-            siteSubtitle = maybe "Social Word Dictionary" (siteSettingValue P.. entityVal) mSiteSubtitle
-        mRoute <- getCurrentRoute
-        req <- getRequest
-        let layoutCsrfToken = reqToken req
-        let showSidebarLayout = case mRoute of
-                Just AdminR -> False
-                Just AdminWordsR -> False
-                Just AdminWordNewR -> False
-                Just (AdminWordEditR _) -> False
-                Just AdminUsersR -> False
-                Just AdminSettingsR -> False
-                _ -> True
-        
-        layoutMaybeAuth <- maybeAuthId
-        layoutViewer <- case layoutMaybeAuth of
-            Nothing -> pure Nothing
-            Just viewerId -> runDB $ get viewerId
-            
-        layoutUnreadNotificationCount <- case layoutMaybeAuth of
-            Nothing -> pure (0 :: Int)
-            Just viewerId -> runDB $ count [NotificationUser ==. viewerId, NotificationIsRead ==. False]
-
         pc <- widgetToPageContent $ do
-            $(widgetFile "layout/default-layout")
-        withUrlRenderer $(hamletFile "templates/layout/default-layout-wrapper.hamlet")
+            [whamlet|
+$maybe msg <- mmsg
+  <div id="alert-message" class="fixed top-6 right-4 z-[100] rounded-xl border border-orange-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 shadow-lg animate-bounce">
+    #{msg}
+
+<div class="min-h-screen">
+  <main>
+    ^{widget}
+|]
+        withUrlRenderer [hamlet|
+$newline never
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>#{pageTitle pc}
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    ^{pageHead pc}
+    <link rel="stylesheet" href=@{StaticR css_tailwind_css}>
+  <body class="bg-[#efe4d6] text-slate-900">
+    <div class="min-h-screen flex flex-col">
+      <main class="flex-1">
+        <div class="mx-auto w-full max-w-[1216px] px-2 py-3 md:px-3">
+          ^{pageBody pc}
+      <footer class="text-slate-500">
+        <div class="mx-auto w-full max-w-[1216px] px-2 py-4 text-xs text-center md:px-3">
+          #{appCopyright $ appSettings master}
+|]
 
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
@@ -102,6 +102,10 @@ instance Yesod App where
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
+    isAuthorized SitemapR _ = return Authorized
+    isAuthorized HealthzR _ = return Authorized
+    isAuthorized (WordOgImageR _) _ = return Authorized
+    isAuthorized (WordOgPngR _) _ = return Authorized
     isAuthorized HomeR _ = return Authorized
     isAuthorized (FrontendAssetR _) _ = return Authorized
     isAuthorized FrontendNewWordR _ = return Authorized
@@ -109,6 +113,20 @@ instance Yesod App where
     isAuthorized (FrontendWordDetailR _) _ = return Authorized
     isAuthorized ApiHomeR _ = return Authorized
     isAuthorized ApiSearchR _ = return Authorized
+    isAuthorized (ApiAdImpressionR _) _ = return Authorized
+    isAuthorized ApiAdminDashboardR _ = isAdmin
+    isAuthorized ApiAdminOpsR _ = isAdmin
+    isAuthorized ApiAdminWordsR _ = isAdmin
+    isAuthorized (ApiAdminWordR _) _ = isAdmin
+    isAuthorized ApiAdminSubmissionsR _ = isAdmin
+    isAuthorized (ApiAdminSubmissionApproveR _) _ = isAdmin
+    isAuthorized (ApiAdminSubmissionRejectR _) _ = isAdmin
+    isAuthorized ApiAdminAdsR _ = isAdmin
+    isAuthorized (ApiAdminAdR _) _ = isAdmin
+    isAuthorized ApiAdminUsersR _ = isAdmin
+    isAuthorized (ApiAdminUserR _) _ = isAdmin
+    isAuthorized ApiAdminSettingsR _ = isAdmin
+    isAuthorized (ApiAdminSettingR _) _ = isAdmin
     isAuthorized (ApiWordR _) _ = return Authorized
     isAuthorized (ApiWordCommentR _) _ = return Authorized
     isAuthorized (ApiWordLikeR _) _ = return Authorized
@@ -139,6 +157,7 @@ instance Yesod App where
         case mUserId of
             Nothing -> return AuthenticationRequired
             Just _ -> return Authorized
+    isAuthorized (AdClickR _) _ = return Authorized
     isAuthorized SettingsR _ = do
         mUserId <- maybeAuthId
         case mUserId of
@@ -147,12 +166,14 @@ instance Yesod App where
 
     -- Admin-only routes.
     isAuthorized AdminR _ = isAdmin
+    isAuthorized AdminOpsR _ = isAdmin
     isAuthorized AdminWordsR _ = isAdmin
     isAuthorized AdminWordNewR _ = isAdmin
     isAuthorized (AdminWordEditR _) _ = isAdmin
     isAuthorized AdminSubmissionsR _ = isAdmin
-    isAuthorized (AdminSubmissionApproveR _) _ = isAdmin
-    isAuthorized (AdminSubmissionRejectR _) _ = isAdmin
+    isAuthorized AdminAdsR _ = isAdmin
+    isAuthorized AdminAdNewR _ = isAdmin
+    isAuthorized (AdminAdR _) _ = isAdmin
     isAuthorized AdminUsersR _ = isAdmin
     isAuthorized AdminUserNewR _ = isAdmin
     isAuthorized (AdminUserR _) _ = isAdmin
@@ -219,14 +240,10 @@ instance YesodAuth App where
         mUser <- getBy $ UniqueUser ident
         case mUser of
             Just (Entity userId _) -> return $ Authenticated userId
-            Nothing -> Authenticated <$> insert (User ident Nothing "user" Nothing Nothing)
+            Nothing -> Authenticated <$> insert (User ident Nothing "user" Nothing Nothing False Nothing)
 
 instance YesodAuthPersist App where
     type AuthEntity App = User
-
-instance HashDBUser User where
-    userPasswordHash = userPassword
-    setPasswordHash p u = u { userPassword = Just p }
 
 isAdmin :: Handler AuthResult
 isAdmin = do
